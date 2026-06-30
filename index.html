@@ -1,0 +1,3500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Track bills and due dates">
+    <meta name="theme-color" content="#0f0f0f">
+    <title>Bill Tracker</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #e8e8e8;
+            overflow: hidden;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            padding: 1rem;
+            border-bottom: 2px solid #00ffff;
+            box-shadow: 0 4px 12px rgba(0, 255, 255, 0.1);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: #00ffff;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .stat-item {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .month-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #1a1a1a;
+            padding: 1rem;
+            border-bottom: 1px solid #333;
+            gap: 1rem;
+        }
+
+        .nav-btn {
+            background: #00ffff;
+            color: #000;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-btn:active {
+            background: #00cc00;
+            transform: scale(0.95);
+        }
+
+        .today-btn {
+            background: transparent;
+            color: #00ffff;
+            border: 1px solid #00ffff;
+            padding: 0.4rem 0.7rem;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .today-btn:active {
+            background: rgba(0,255,255,0.15);
+        }
+
+        /* Upcoming widget */
+        .upcoming-widget {
+            margin-bottom: 1rem;
+        }
+
+        .upcoming-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #aaa;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .upcoming-strip {
+            display: flex;
+            gap: 0.6rem;
+            overflow-x: auto;
+            padding-bottom: 0.4rem;
+            scrollbar-width: none;
+        }
+
+        .upcoming-strip::-webkit-scrollbar { display: none; }
+
+        .upcoming-chip {
+            flex-shrink: 0;
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
+            min-width: 110px;
+            max-width: 140px;
+            border-left: 3px solid #00ffff;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .upcoming-chip:active { background: #242424; }
+
+        .upcoming-chip-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.25rem;
+        }
+
+        .upcoming-chip-amount {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #ff00ff;
+            margin-bottom: 0.2rem;
+        }
+
+        .upcoming-chip-days {
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        /* Notes */
+        textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #333;
+            background: #0f0f0f;
+            color: #e8e8e8;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            resize: none;
+            min-height: 70px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.2);
+        }
+
+        .card-notes {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 0.35rem;
+            font-style: italic;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .autopay-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #00ff88;
+            background: rgba(0,255,136,0.12);
+            border: 1px solid rgba(0,255,136,0.3);
+            padding: 0.1rem 0.45rem;
+            border-radius: 10px;
+            margin-top: 0.3rem;
+        }
+
+        .autopay-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.9rem;
+            background: rgba(0,255,136,0.06);
+            border: 1px solid rgba(0,255,136,0.2);
+            border-radius: 6px;
+            margin-bottom: 1.2rem;
+            cursor: pointer;
+        }
+
+        .autopay-row input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            accent-color: #00ff88;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .autopay-row-label {
+            flex: 1;
+        }
+
+        .autopay-row-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #00ff88;
+        }
+
+        .autopay-row-sub {
+            font-size: 0.78rem;
+            color: #666;
+            margin-top: 0.15rem;
+        }
+
+        /* Detail modal */
+        .detail-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 100;
+            align-items: flex-end;
+        }
+
+        .detail-modal.active { display: flex; }
+
+        .detail-content {
+            background: #1a1a1a;
+            width: 100%;
+            border-radius: 16px 16px 0 0;
+            max-height: 88vh;
+            overflow-y: auto;
+            border-top: 2px solid #00ffff;
+        }
+
+        .detail-header {
+            padding: 1.2rem 1.2rem 0.8rem;
+            border-bottom: 1px solid #333;
+            position: sticky;
+            top: 0;
+            background: #1a1a1a;
+            z-index: 1;
+        }
+
+        .detail-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.4rem;
+        }
+
+        .detail-bill-name {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+            flex: 1;
+        }
+
+        .detail-body {
+            padding: 1rem 1.2rem;
+        }
+
+        .detail-section {
+            margin-bottom: 1.2rem;
+        }
+
+        .detail-section-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.6rem;
+        }
+
+        .detail-notes-text {
+            font-size: 0.9rem;
+            color: #ccc;
+            font-style: italic;
+            line-height: 1.4;
+        }
+
+        .history-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #222;
+        }
+
+        .history-row:last-child { border-bottom: none; }
+
+        .history-month {
+            font-size: 0.9rem;
+            color: #ddd;
+            width: 80px;
+        }
+
+        .history-amount {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #ff00ff;
+            flex: 1;
+            text-align: center;
+        }
+
+        .history-status {
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            min-width: 52px;
+            text-align: center;
+        }
+
+        .history-status.paid {
+            background: rgba(0,255,0,0.15);
+            color: #00ff00;
+        }
+
+        .history-status.unpaid {
+            background: rgba(255,170,0,0.15);
+            color: #ffaa00;
+        }
+
+        .history-status.future {
+            background: rgba(100,100,100,0.15);
+            color: #666;
+        }
+
+        .detail-actions {
+            display: flex;
+            gap: 0.8rem;
+            padding: 1rem 1.2rem;
+            border-top: 1px solid #333;
+        }
+
+        .month-display {
+            flex: 1;
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #00ffff;
+        }
+
+        /* bottom nav replaces tab-bar */
+
+        .main-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            padding-bottom: 90px;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 64px;
+            background: #1a1a1a;
+            border-top: 2px solid #00ffff;
+            display: flex;
+            z-index: 60;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            background: transparent;
+            border: none;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+
+        .nav-item.active {
+            color: #00ffff;
+        }
+
+        .nav-item:active {
+            background: rgba(0,255,255,0.08);
+        }
+
+        .nav-icon {
+            font-size: 1.4rem;
+            line-height: 1;
+        }
+
+        .nav-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+
+        /* SVG Charts */
+        .chart-section {
+            margin-bottom: 2rem;
+        }
+
+        .donut-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .donut-svg {
+            flex-shrink: 0;
+        }
+
+        .donut-legend {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.82rem;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .legend-name {
+            flex: 1;
+            color: #ddd;
+        }
+
+        .legend-amt {
+            color: #ff00ff;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        .trend-svg-wrap {
+            margin-top: 0.5rem;
+            overflow-x: auto;
+        }
+
+        .trend-svg {
+            display: block;
+        }
+
+        .trend-bar-label {
+            font-size: 10px;
+            fill: #aaa;
+            text-anchor: middle;
+        }
+
+        .trend-bar-value {
+            font-size: 9px;
+            fill: #ff00ff;
+            text-anchor: middle;
+            font-weight: bold;
+        }
+
+        .trend-axis-line {
+            stroke: #333;
+            stroke-width: 1;
+        }
+
+        .view-container {
+            display: none;
+        }
+
+        .view-container.active {
+            display: block;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: #666;
+        }
+
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .bill-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .bill-card {
+            background: #1a1a1a;
+            border-left: 4px solid #00ffff;
+            border-radius: 6px;
+            padding: 0.9rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .bill-card:active {
+            background: #242424;
+        }
+
+        .bill-card.paid {
+            opacity: 0.6;
+            background: #1a2a1a;
+            border-left-color: #00ff00;
+        }
+
+        .bill-card.due-soon {
+            border-left-color: #ffaa00;
+            background: #2a2020;
+        }
+
+        .bill-card.overdue {
+            border-left-color: #ff3333;
+            background: #3a1a1a;
+            animation: pulse-red 2s infinite;
+        }
+
+        .bill-card.has-override::after {
+            content: "✎";
+            position: absolute;
+            right: 0.5rem;
+            top: 0.5rem;
+            color: #ff00ff;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 51, 51, 0.3); }
+            50% { box-shadow: 0 0 0 8px rgba(255, 51, 51, 0); }
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .bill-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #fff;
+            flex: 1;
+        }
+
+        .bill-amount {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #ff00ff;
+            text-align: right;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.6rem;
+        }
+
+        .bill-date {
+            font-size: 0.9rem;
+            color: #00ddff;
+        }
+
+        .bill-actions {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .btn-small {
+            padding: 0.35rem 0.7rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+        }
+
+        .btn-toggle {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .btn-toggle:active {
+            background: #00cc00;
+        }
+
+        .btn-toggle.paid {
+            background: #666;
+            color: #aaa;
+        }
+
+        .btn-delete {
+            background: #ff3333;
+            color: #fff;
+        }
+
+        .btn-delete:active {
+            background: #cc0000;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.3rem;
+            margin-bottom: 1rem;
+        }
+
+        .calendar-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.3rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #00ffff;
+            text-align: center;
+        }
+
+        .calendar-header div {
+            padding: 0.5rem 0;
+        }
+
+        .calendar-day {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 0.5rem;
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .calendar-day:active {
+            background: #242424;
+            border-color: #00ffff;
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .calendar-day.today {
+            border: 2px solid #00ffff;
+            background: rgba(0, 255, 255, 0.1);
+        }
+
+        .calendar-day-num {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #fff;
+            margin-bottom: 0.3rem;
+        }
+
+        .calendar-day-bills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.2rem;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .bill-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #00ffff;
+        }
+
+        .bill-dot.paid {
+            background: #00ff00;
+            opacity: 0.5;
+        }
+
+        .bill-dot.overdue {
+            background: #ff3333;
+        }
+
+        .bill-dot.due-soon {
+            background: #ffaa00;
+        }
+
+        .day-bills-sheet {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1a1a1a;
+            border-top: 2px solid #00ffff;
+            border-radius: 16px 16px 0 0;
+            max-height: 70vh;
+            overflow-y: auto;
+            z-index: 90;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .day-bills-sheet.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .day-bills-header {
+            padding: 1.5rem 1.5rem 1rem;
+            border-bottom: 1px solid #333;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #00ffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .day-bills-content {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #00ffff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 2rem;
+            right: 1.5rem;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00ffff 0%, #00ff88 100%);
+            color: #000;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 255, 136, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            z-index: 50;
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 6px rgba(0, 255, 136, 0.3);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            align-items: flex-end;
+            animation: slideUp 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            width: 100%;
+            border-radius: 16px 16px 0 0;
+            padding: 1.5rem;
+            max-height: 90vh;
+            overflow-y: auto;
+            border-top: 2px solid #00ffff;
+        }
+
+        .modal-header {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #00ffff;
+            margin-bottom: 1rem;
+        }
+
+        .edit-scope-info {
+            background: #2a2a2a;
+            border-left: 3px solid #ff00ff;
+            padding: 0.8rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-bottom: 0.4rem;
+            font-weight: 600;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #333;
+            background: #0f0f0f;
+            color: #e8e8e8;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.2);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.9rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00ffff 0%, #00ff88 100%);
+            color: #000;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-cancel {
+            background: #333;
+            color: #e8e8e8;
+        }
+
+        .btn-cancel:active {
+            background: #444;
+        }
+
+        .delete-confirm {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 110;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .delete-confirm.active {
+            display: flex;
+        }
+
+        .confirm-box {
+            background: #1a1a1a;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid #ff3333;
+            max-width: 90%;
+        }
+
+        .confirm-box p {
+            color: #aaa;
+            margin-bottom: 1.5rem;
+        }
+
+        .confirm-box .btn-group {
+            margin-top: 0;
+        }
+
+        .btn-danger {
+            background: #ff3333;
+            color: #fff;
+        }
+
+        .btn-danger:active {
+            background: #cc0000;
+        }
+
+        .frequency-note {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.3rem;
+        }
+
+        .scope-buttons {
+            display: flex;
+            gap: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .scope-btn {
+            flex: 1;
+            padding: 0.8rem;
+            border: 2px solid #666;
+            background: transparent;
+            color: #aaa;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .scope-btn.active {
+            border-color: #ff00ff;
+            background: rgba(255, 0, 255, 0.1);
+            color: #ff00ff;
+        }
+
+        .scope-btn:active {
+            transform: scale(0.95);
+        }
+
+        .reset-override-btn {
+            background: #666;
+            color: #fff;
+            padding: 0.6rem 0.8rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+
+        .reset-override-btn:active {
+            background: #555;
+        }
+
+        .cat-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.45rem;
+            border-radius: 10px;
+            margin-top: 0.3rem;
+            letter-spacing: 0.3px;
+        }
+
+        /* Analytics view */
+        .analytics-section {
+            margin-bottom: 2rem;
+        }
+
+        .analytics-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #00ffff;
+            margin-bottom: 1rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid #333;
+        }
+
+        .period-toggle {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .period-btn {
+            flex: 1;
+            padding: 0.6rem;
+            border: 2px solid #333;
+            background: transparent;
+            color: #aaa;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .period-btn.active {
+            border-color: #00ffff;
+            background: rgba(0, 255, 255, 0.1);
+            color: #00ffff;
+        }
+
+        .bar-row {
+            margin-bottom: 0.9rem;
+        }
+
+        .bar-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.3rem;
+            font-size: 0.9rem;
+        }
+
+        .bar-name {
+            color: #e8e8e8;
+            font-weight: 600;
+        }
+
+        .bar-amount {
+            color: #ff00ff;
+            font-weight: 700;
+        }
+
+        .bar-track {
+            background: #333;
+            border-radius: 4px;
+            height: 10px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.4s ease;
+        }
+
+        .bill-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.7rem 0;
+            border-bottom: 1px solid #222;
+        }
+
+        .bill-row:last-child {
+            border-bottom: none;
+        }
+
+        .bill-row-name {
+            font-size: 0.9rem;
+            color: #e8e8e8;
+        }
+
+        .bill-row-meta {
+            text-align: right;
+        }
+
+        .bill-row-amount {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #ff00ff;
+        }
+
+        .bill-row-sub {
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        .safe-box {
+            background: #1a1a1a;
+            border: 1px solid #00ff88;
+            border-radius: 10px;
+            padding: 1.1rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .safe-box.warn { border-color: #ffff00; }
+        .safe-box.danger { border-color: #ff3333; }
+        .safe-label { font-size: 0.85rem; color: #aaa; margin-bottom: 0.25rem; }
+        .safe-amount { font-size: 2.1rem; font-weight: 700; color: #00ff88; }
+        .safe-box.warn .safe-amount { color: #ffff00; }
+        .safe-box.danger .safe-amount { color: #ff3333; }
+        .safe-sub { font-size: 0.8rem; color: #888; margin-top: 0.3rem; }
+        .cf-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1.25rem;
+        }
+        .cf-stat {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            padding: 0.6rem 0.4rem;
+            text-align: center;
+        }
+        .cf-stat-val { font-size: 1.05rem; font-weight: 700; }
+        .cf-stat-label { font-size: 0.68rem; color: #888; margin-top: 0.15rem; }
+        .cf-legend { display: flex; gap: 1rem; justify-content: center; font-size: 0.75rem; color: #aaa; margin-top: 0.5rem; }
+        .cf-legend span::before { content: '●'; margin-right: 0.3rem; }
+        .cf-event {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.55rem 0.2rem;
+            border-bottom: 1px solid #1f1f1f;
+        }
+        .cf-event-left { display: flex; flex-direction: column; }
+        .cf-event-name { font-size: 0.9rem; }
+        .cf-event-date { font-size: 0.72rem; color: #777; }
+        .cf-event-right { text-align: right; }
+        .cf-event-amt { font-size: 0.92rem; font-weight: 600; }
+        .cf-event-bal { font-size: 0.72rem; color: #888; margin-top: 0.1rem; }
+        .cf-event.neg-bal .cf-event-bal { color: #ff3333; font-weight: 700; }
+        .income-chip {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #161616; border: 1px solid #2a2a2a; border-radius: 8px;
+            padding: 0.5rem 0.7rem; margin-bottom: 0.4rem; font-size: 0.85rem;
+        }
+        .income-chip button {
+            background: none; border: none; color: #ff3333; font-size: 1.1rem;
+            cursor: pointer; line-height: 1; padding: 0 0.2rem;
+        }
+
+        .analytics-total-box {
+            background: #1a1a1a;
+            border: 1px solid #00ffff;
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .analytics-total-label {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 0.25rem;
+        }
+
+        .analytics-total-amount {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #00ffff;
+        }
+
+        .analytics-total-sub {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+
+        .analytics-change {
+            display: inline-block;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 10px;
+        }
+
+        .change-up {
+            color: #ff4444;
+            background: rgba(255,68,68,0.12);
+        }
+
+        .change-down {
+            color: #00ff88;
+            background: rgba(0,255,136,0.12);
+        }
+
+        .change-neutral {
+            color: #aaa;
+            background: rgba(170,170,170,0.12);
+        }
+
+        .bill-change-up {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #ff4444;
+        }
+
+        .bill-change-down {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #00ff88;
+        }
+
+        .bill-change-neutral {
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        .bill-change-new {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #ffaa00;
+        }
+
+        .no-analytics {
+            text-align: center;
+            color: #666;
+            padding: 2rem 0;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- LOCK SCREEN -->
+    <div id="lock-screen" style="display:none;position:fixed;inset:0;z-index:1000;background:#0f0f0f;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;">
+        <div style="font-size:2rem;color:#00ffff;margin-bottom:0.4rem;">🔒</div>
+        <h1 style="font-size:1.4rem;color:#00ffff;margin-bottom:0.25rem;">Bill Tracker</h1>
+        <div id="lock-subtitle" style="color:#aaa;font-size:0.9rem;margin-bottom:1.25rem;text-align:center;">Enter your password</div>
+        <input id="lock-input" type="password" inputmode="numeric" autocomplete="off" placeholder="Password" style="width:100%;max-width:300px;padding:0.8rem;font-size:1rem;background:#1a1a1a;border:1px solid #333;border-radius:10px;color:#e8e8e8;text-align:center;">
+        <input id="lock-input2" type="password" autocomplete="off" placeholder="Confirm password" style="display:none;width:100%;max-width:300px;padding:0.8rem;font-size:1rem;background:#1a1a1a;border:1px solid #333;border-radius:10px;color:#e8e8e8;text-align:center;margin-top:0.6rem;">
+        <div id="lock-error" style="color:#ff3333;font-size:0.85rem;min-height:1.1rem;margin-top:0.5rem;text-align:center;"></div>
+        <button id="lock-submit" style="width:100%;max-width:300px;padding:0.8rem;font-size:1rem;background:#00ffff;color:#0f0f0f;border:none;border-radius:10px;font-weight:bold;cursor:pointer;margin-top:0.75rem;">Unlock</button>
+    </div>
+
+    <!-- SETTINGS SHEET -->
+    <div id="settings-sheet" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.7);align-items:flex-end;justify-content:center;">
+        <div style="background:#1a1a1a;width:100%;max-width:600px;border-radius:16px 16px 0 0;border-top:2px solid #00ffff;padding:1.25rem;max-height:85vh;overflow-y:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                <h2 style="color:#00ffff;font-size:1.2rem;">Settings</h2>
+                <button id="settings-close" style="background:none;border:none;color:#aaa;font-size:1.5rem;cursor:pointer;line-height:1;">×</button>
+            </div>
+
+            <div style="font-size:0.8rem;color:#00ffff;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Backup &amp; Restore</div>
+            <button id="export-btn" style="width:100%;padding:0.75rem;background:#222;border:1px solid #00ff88;color:#00ff88;border-radius:10px;cursor:pointer;margin-bottom:0.6rem;font-size:0.95rem;">⬇ Export Backup (JSON)</button>
+            <button id="import-btn" style="width:100%;padding:0.75rem;background:#222;border:1px solid #ffff00;color:#ffff00;border-radius:10px;cursor:pointer;margin-bottom:0.6rem;font-size:0.95rem;">⬆ Restore from Backup</button>
+            <input id="import-file" type="file" accept="application/json,.json" style="display:none;">
+            <div id="settings-msg" style="font-size:0.85rem;min-height:1.1rem;margin-bottom:1rem;"></div>
+
+            <div style="font-size:0.8rem;color:#00ffff;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Cash Flow Setup</div>
+            <label style="display:block;color:#aaa;font-size:0.85rem;margin-bottom:0.3rem;">Current Balance ($)</label>
+            <div style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:0.4rem;">
+                <input id="cf-balance" type="number" inputmode="decimal" step="0.01" placeholder="0.00" style="width:100%;box-sizing:border-box;padding:0.7rem;background:#1a1a1a;border:1px solid #333;border-radius:10px;color:#e8e8e8;">
+                <input id="cf-balance-date" type="date" style="width:100%;box-sizing:border-box;padding:0.7rem;background:#1a1a1a;border:1px solid #333;border-radius:10px;color:#e8e8e8;">
+            </div>
+            <div style="color:#666;font-size:0.75rem;margin-bottom:0.9rem;">Your balance as of this date. The timeline projects forward from here.</div>
+
+            <label style="display:block;color:#aaa;font-size:0.85rem;margin-bottom:0.3rem;">Income / Paychecks</label>
+            <div id="income-list" style="margin-bottom:0.6rem;"></div>
+            <div style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:0.5rem;">
+                <input id="inc-name" type="text" placeholder="Source (e.g., Paycheck)" style="width:100%;box-sizing:border-box;padding:0.7rem;background:#1a1a1a;border:1px solid #333;border-radius:10px;color:#e8e8e8;">
+                <input id="inc-amount" type="number" inputmode="decimal" step="0.01" placeholder="Amount" style="width:100%;box-sizing:border-box;padding:0.7rem;background:#1a1a1a;border:1px solid #333;border-radius:10px;color:#e8e8e8;">
+                <input id="inc-date" type="date" style="width:100%;box-sizing:border-box;padding:0.7rem;background:#1a1a1a;border:1px solid #333;border-radius:10px;color:#e8e8e8;">
+                <select id="inc-frequency" style="width:100%;box-sizing:border-box;padding:0.7rem;background:#1a1a1a;border:1px solid #333;border-radius:10px;color:#e8e8e8;">
+                    <option value="one-time">One-time</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="biweekly" selected>Biweekly</option>
+                    <option value="semimonthly">Semi-monthly (1st &amp; 15th)</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+            <button id="add-income-btn" style="width:100%;padding:0.7rem;background:#222;border:1px solid #00ff88;color:#00ff88;border-radius:10px;cursor:pointer;margin-bottom:1.25rem;font-size:0.95rem;">+ Add Income</button>
+
+            <div style="font-size:0.8rem;color:#00ffff;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.5rem;">Security</div>
+            <button id="change-pw-btn" style="width:100%;padding:0.75rem;background:#222;border:1px solid #ff00ff;color:#ff00ff;border-radius:10px;cursor:pointer;margin-bottom:0.6rem;font-size:0.95rem;">🔑 Change Password</button>
+            <button id="remove-pw-btn" style="width:100%;padding:0.75rem;background:#222;border:1px solid #ff3333;color:#ff3333;border-radius:10px;cursor:pointer;font-size:0.95rem;">🔓 Remove Password</button>
+        </div>
+    </div>
+
+    <header>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <h1>$ Bill Tracker</h1>
+            <button id="settings-btn" style="background:none;border:1px solid #00ffff;color:#00ffff;border-radius:8px;padding:0.3rem 0.55rem;font-size:1.1rem;cursor:pointer;line-height:1;">⚙</button>
+        </div>
+        <div class="stats">
+            <div class="stat-item">
+                <span>Due:</span>
+                <span id="total-due">$0</span>
+            </div>
+            <div class="stat-item">
+                <span>Bills:</span>
+                <span id="total-bills">0</span>
+            </div>
+            <div class="stat-item">
+                <span>Overdue:</span>
+                <span id="overdue-count">0</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="month-nav" id="month-nav">
+        <button class="nav-btn" id="prev-month">≪ Prev</button>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0.3rem;flex:1;">
+            <div class="month-display" id="month-display">June 2026</div>
+            <button class="today-btn" id="today-btn">Today</button>
+        </div>
+        <button class="nav-btn" id="next-month">Next ≫</button>
+    </div>
+
+    <div class="main-container">
+        <div id="list-view" class="view-container active">
+            <div class="upcoming-widget" id="upcoming-widget" style="display:none;">
+                <div class="upcoming-label">⚡ Due Next 7 Days</div>
+                <div class="upcoming-strip" id="upcoming-strip"></div>
+            </div>
+            <div id="bill-list" class="bill-list"></div>
+            <div id="empty-state" class="empty-state" style="display: none;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                <p>No bills this month!</p>
+                <p style="font-size: 0.9rem;">Add a bill or navigate to another month</p>
+            </div>
+        </div>
+
+        <div id="calendar-view" class="view-container">
+            <div class="calendar-header">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+            </div>
+            <div id="calendar-grid" class="calendar-grid"></div>
+        </div>
+
+        <div id="cashflow-view" class="view-container">
+            <div class="safe-box" id="safe-box">
+                <div class="safe-label" id="safe-label">Safe to Spend</div>
+                <div class="safe-amount" id="safe-amount">$0</div>
+                <div class="safe-sub" id="safe-sub"></div>
+            </div>
+            <div class="cf-row" id="cf-summary"></div>
+            <div class="analytics-section chart-section">
+                <div class="analytics-title">Projected Balance</div>
+                <div class="trend-svg-wrap">
+                    <svg class="trend-svg" id="cashflow-svg" height="180" viewBox="0 0 340 180"></svg>
+                </div>
+                <div class="cf-legend" id="cashflow-legend"></div>
+            </div>
+            <div class="analytics-section">
+                <div class="analytics-title">Timeline</div>
+                <div id="cashflow-timeline"></div>
+            </div>
+            <div id="cashflow-empty" class="empty-state" style="display:none;padding:2rem 1rem;">
+                <p>No income set up yet.</p>
+                <p style="font-size:0.9rem;">Tap ⚙ → Cash Flow Setup to add your paychecks and starting balance.</p>
+            </div>
+        </div>
+
+        <div id="analytics-view" class="view-container">
+            <div class="period-toggle">
+                <button class="period-btn active" data-period="month" id="period-month">This Month</button>
+                <button class="period-btn" data-period="year" id="period-year">This Year</button>
+                <button class="period-btn" data-period="all" id="period-all">All Time</button>
+            </div>
+            <div class="analytics-total-box">
+                <div class="analytics-total-label">Total Tracked</div>
+                <div class="analytics-total-amount" id="analytics-grand-total">$0</div>
+                <div class="analytics-total-sub" id="analytics-period-label">June 2026</div>
+                <div id="analytics-change"></div>
+            </div>
+            <div class="analytics-section chart-section">
+                <div class="analytics-title">Spending by Category</div>
+                <div class="donut-wrapper">
+                    <svg class="donut-svg" id="donut-svg" width="140" height="140" viewBox="0 0 140 140"></svg>
+                    <div class="donut-legend" id="donut-legend"></div>
+                </div>
+            </div>
+            <div class="analytics-section chart-section">
+                <div class="analytics-title">Monthly Trend</div>
+                <div class="trend-svg-wrap">
+                    <svg class="trend-svg" id="trend-svg" height="160" viewBox="0 0 340 160"></svg>
+                </div>
+            </div>
+            <div class="analytics-section">
+                <div class="analytics-title">By Bill</div>
+                <div id="analytics-bills"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="day-bills-sheet" class="day-bills-sheet">
+        <div class="day-bills-header">
+            <span id="day-bills-title">Bills</span>
+            <button class="close-btn" id="close-day-bills">✕</button>
+        </div>
+        <div id="day-bills-content" class="day-bills-content"></div>
+    </div>
+
+    <button class="fab" id="add-bill-btn" style="bottom:5rem;">+</button>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active" data-tab="list">
+            <span class="nav-icon">📋</span>
+            <span class="nav-label">List</span>
+        </button>
+        <button class="nav-item" data-tab="calendar">
+            <span class="nav-icon">📅</span>
+            <span class="nav-label">Calendar</span>
+        </button>
+        <button class="nav-item" data-tab="cashflow">
+            <span class="nav-icon">💵</span>
+            <span class="nav-label">Cash Flow</span>
+        </button>
+        <button class="nav-item" data-tab="analytics">
+            <span class="nav-icon">📊</span>
+            <span class="nav-label">Analytics</span>
+        </button>
+    </nav>
+
+    <div id="bill-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="modal-title">Add Bill</div>
+            
+            <div id="scope-selector" style="display: none;">
+                <div class="scope-buttons">
+                    <button type="button" class="scope-btn active" data-scope="month" id="scope-month">This Month</button>
+                    <button type="button" class="scope-btn" data-scope="template" id="scope-template">Template</button>
+                </div>
+                <div class="edit-scope-info" id="scope-info"></div>
+            </div>
+
+            <form id="bill-form">
+                <div class="form-group">
+                    <label for="bill-name">Bill Name</label>
+                    <input type="text" id="bill-name" placeholder="e.g., Electric, Internet" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="bill-amount">Amount ($)</label>
+                    <input type="number" id="bill-amount" placeholder="0.00" step="0.01" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="bill-category">Category</label>
+                    <select id="bill-category">
+                        <option value="Housing">🏠 Housing</option>
+                        <option value="Utilities">⚡ Utilities</option>
+                        <option value="Insurance">🛡️ Insurance</option>
+                        <option value="Subscriptions">📱 Subscriptions</option>
+                        <option value="Transportation">🚗 Transportation</option>
+                        <option value="Medical">🏥 Medical</option>
+                        <option value="Debt">💳 Debt</option>
+                        <option value="Food">🍔 Food &amp; Dining</option>
+                        <option value="Entertainment">🎬 Entertainment</option>
+                        <option value="Savings">💰 Savings</option>
+                        <option value="Other">📋 Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="bill-date">Due Date</label>
+                    <input type="date" id="bill-date" required>
+                </div>
+
+                <div id="frequency-group" class="form-group">
+                    <label for="bill-frequency">Frequency</label>
+                    <select id="bill-frequency">
+                        <option value="one-time">One-time</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly (every 3 months)</option>
+                        <option value="biannual">Biannual (every 6 months)</option>
+                        <option value="yearly">Yearly</option>
+                        <option value="biweekly">Biweekly</option>
+                    </select>
+                    <div class="frequency-note" id="frequency-note"></div>
+                </div>
+
+                <div id="reset-group" style="display: none;">
+                    <button type="button" class="reset-override-btn" id="reset-override">Clear Override (use template)</button>
+                </div>
+
+                <div id="autopay-group">
+                    <label class="autopay-row" for="bill-autopay" style="margin-bottom:0;">
+                        <input type="checkbox" id="bill-autopay">
+                        <div class="autopay-row-label">
+                            <div class="autopay-row-title">⚡ Auto-Pay</div>
+                            <div class="autopay-row-sub">Bill is paid automatically — app marks it paid on the due date</div>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="form-group" style="margin-top:1.2rem;">
+                    <label for="bill-notes">Notes (optional)</label>
+                    <textarea id="bill-notes" placeholder="Account number, website, reminders..."></textarea>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-cancel" id="cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submit-btn">Save Bill</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="detail-modal" class="detail-modal">
+        <div class="detail-content">
+            <div class="detail-header">
+                <div class="detail-header-top">
+                    <div class="detail-bill-name" id="detail-name"></div>
+                    <button class="close-btn" id="close-detail">✕</button>
+                </div>
+                <span id="detail-cat-badge" class="cat-badge"></span>
+                <span id="detail-frequency" style="font-size:0.8rem;color:#666;margin-left:0.5rem;"></span>
+            </div>
+            <div class="detail-body">
+                <div class="detail-section" id="detail-notes-section" style="display:none;">
+                    <div class="detail-section-title">Notes</div>
+                    <div class="detail-notes-text" id="detail-notes-text"></div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-section-title">Amount History</div>
+                    <div class="trend-svg-wrap" id="detail-chart-wrap" style="display:none;">
+                        <svg class="trend-svg" id="detail-chart-svg" height="150" viewBox="0 0 340 150"></svg>
+                    </div>
+                    <div id="detail-variance" style="font-size:0.78rem;color:#888;text-align:center;margin-top:0.4rem;"></div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-section-title">Payment History (12 months)</div>
+                    <div id="detail-history"></div>
+                </div>
+            </div>
+            <div class="detail-actions">
+                <button type="button" class="btn btn-cancel" id="detail-close-btn" style="flex:1;">Close</button>
+                <button type="button" class="btn btn-primary" id="detail-edit-btn" style="flex:2;">Edit Bill</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-confirm" class="delete-confirm">
+        <div class="confirm-box">
+            <p id="delete-text">Delete this bill?</p>
+            <div class="btn-group">
+                <button type="button" class="btn btn-cancel" id="confirm-cancel">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/BillTracker/sw.js').then(function(reg) {
+                // Check for an updated worker every time the app loads
+                reg.update();
+                reg.addEventListener('updatefound', function() {
+                    var nw = reg.installing;
+                    if (!nw) return;
+                    nw.addEventListener('statechange', function() {
+                        // New worker installed and an old one is already controlling -> activate now
+                        if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                            nw.postMessage({ type: 'SKIP_WAITING' });
+                        }
+                    });
+                });
+            });
+            // When the new worker takes control, reload once to get fresh assets
+            var refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', function() {
+                if (refreshing) return;
+                refreshing = true;
+                window.location.reload();
+            });
+        }
+
+        const STORAGE_KEY = 'billTrackerData';
+        const OVERRIDES_KEY = 'billTrackerOverrides';
+        let bills = [];
+        let overrides = {};
+        let currentMonth = new Date();
+        let editingId = null;
+        let editingMonth = null;
+        let editScope = 'month';
+        let deletingId = null;
+        let deletingInstanceMonth = null;
+        let currentView = 'list';
+        let selectedDate = null;
+        let analyticsPeriod = 'month';
+
+        const CATEGORIES = {
+            'Housing':        { color: '#00ffff', bg: 'rgba(0,255,255,0.15)' },
+            'Utilities':      { color: '#ffff00', bg: 'rgba(255,255,0,0.15)' },
+            'Insurance':      { color: '#ff00ff', bg: 'rgba(255,0,255,0.15)' },
+            'Subscriptions':  { color: '#00ff88', bg: 'rgba(0,255,136,0.15)' },
+            'Transportation': { color: '#ff8800', bg: 'rgba(255,136,0,0.15)' },
+            'Medical':        { color: '#ff4488', bg: 'rgba(255,68,136,0.15)' },
+            'Debt':           { color: '#ff3333', bg: 'rgba(255,51,51,0.15)' },
+            'Food':           { color: '#88ff00', bg: 'rgba(136,255,0,0.15)' },
+            'Entertainment':  { color: '#8800ff', bg: 'rgba(136,0,255,0.25)' },
+            'Savings':        { color: '#00ff44', bg: 'rgba(0,255,68,0.15)' },
+            'Other':          { color: '#aaaaaa', bg: 'rgba(170,170,170,0.15)' }
+        };
+
+        function getBills() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            return data ? JSON.parse(data) : [];
+        }
+
+        function getOverrides() {
+            const data = localStorage.getItem(OVERRIDES_KEY);
+            return data ? JSON.parse(data) : {};
+        }
+
+        function saveBills() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(bills));
+            localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
+            render();
+        }
+
+        // ===== INCOME / CASH FLOW DATA =====
+        const INCOME_KEY = 'billTrackerIncome';
+        const BALANCE_KEY = 'billTrackerBalance';
+
+        function getIncome() {
+            const data = localStorage.getItem(INCOME_KEY);
+            return data ? JSON.parse(data) : [];
+        }
+        function saveIncome(list) {
+            localStorage.setItem(INCOME_KEY, JSON.stringify(list));
+        }
+        function getBalance() {
+            const data = localStorage.getItem(BALANCE_KEY);
+            return data ? JSON.parse(data) : null; // { amount, date }
+        }
+        function saveBalance(obj) {
+            if (obj) localStorage.setItem(BALANCE_KEY, JSON.stringify(obj));
+            else localStorage.removeItem(BALANCE_KEY);
+        }
+
+        // Income supports weekly + semimonthly in addition to the bill frequencies.
+        function generateIncomeDates(startDate, frequency, rangeStart, rangeEnd) {
+            const out = [];
+            if (frequency === 'one-time') {
+                const d = parseDate(startDate);
+                if (d >= rangeStart && d <= rangeEnd) out.push(new Date(d));
+                return out;
+            }
+            if (frequency === 'semimonthly') {
+                // 1st and 15th of each month in range
+                let y = rangeStart.getFullYear();
+                let m = rangeStart.getMonth();
+                const end = rangeEnd;
+                let cursor = new Date(y, m, 1);
+                while (cursor <= end) {
+                    [1, 15].forEach(day => {
+                        const d = new Date(cursor.getFullYear(), cursor.getMonth(), day);
+                        if (d >= rangeStart && d <= rangeEnd) out.push(d);
+                    });
+                    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+                }
+                return out;
+            }
+            // Step-based: weekly, biweekly, monthly
+            let current = parseDate(startDate);
+            // Wind backward to before the range so we don't miss early hits
+            let guard = 0;
+            while (current > rangeStart && guard < 520) {
+                if (frequency === 'weekly') current.setDate(current.getDate() - 7);
+                else if (frequency === 'biweekly') current.setDate(current.getDate() - 14);
+                else if (frequency === 'monthly') current.setMonth(current.getMonth() - 1);
+                else break;
+                guard++;
+            }
+            guard = 0;
+            while (current <= rangeEnd && guard < 520) {
+                if (current >= rangeStart && current <= rangeEnd) out.push(new Date(current));
+                if (frequency === 'weekly') current.setDate(current.getDate() + 7);
+                else if (frequency === 'biweekly') current.setDate(current.getDate() + 14);
+                else if (frequency === 'monthly') current.setMonth(current.getMonth() + 1);
+                else break;
+                guard++;
+            }
+            return out;
+        }
+
+
+        function getOverrideKey(billId, year, month) {
+            return billId + '-' + year + '-' + (month + 1).toString().padStart(2, '0');
+        }
+
+        function getOverride(billId, year, month) {
+            const key = getOverrideKey(billId, year, month);
+            return overrides[key];
+        }
+
+        function setOverride(billId, year, month, data) {
+            const key = getOverrideKey(billId, year, month);
+            if (data && Object.keys(data).length > 0) {
+                overrides[key] = data;
+            } else {
+                delete overrides[key];
+            }
+        }
+
+        function generateUpcomingDates(startDate, frequency, count = 24) {
+            const dates = [];
+            let current = parseDate(startDate);
+
+            for (let i = 0; i < count; i++) {
+                dates.push(new Date(current));
+
+                if (frequency === 'monthly') {
+                    current.setMonth(current.getMonth() + 1);
+                } else if (frequency === 'quarterly') {
+                    current.setMonth(current.getMonth() + 3);
+                } else if (frequency === 'biannual') {
+                    current.setMonth(current.getMonth() + 6);
+                } else if (frequency === 'yearly') {
+                    current.setFullYear(current.getFullYear() + 1);
+                } else if (frequency === 'biweekly') {
+                    current.setDate(current.getDate() + 14);
+                } else {
+                    break;
+                }
+            }
+
+            return dates;
+        }
+
+        function generateBidirectionalDates(startDate, frequency, backCount = 36, forwardCount = 36) {
+            if (frequency === 'one-time') {
+                return [parseDate(startDate)];
+            }
+            const dates = [];
+            let back = parseDate(startDate);
+            for (let i = 0; i < backCount; i++) {
+                if (frequency === 'monthly') { back.setMonth(back.getMonth() - 1); }
+                else if (frequency === 'quarterly') { back.setMonth(back.getMonth() - 3); }
+                else if (frequency === 'biannual') { back.setMonth(back.getMonth() - 6); }
+                else if (frequency === 'yearly') { back.setFullYear(back.getFullYear() - 1); }
+                else if (frequency === 'biweekly') { back.setDate(back.getDate() - 14); }
+                else { break; }
+                dates.push(new Date(back));
+            }
+            let fwd = parseDate(startDate);
+            dates.push(new Date(fwd));
+            for (let i = 0; i < forwardCount; i++) {
+                if (frequency === 'monthly') { fwd.setMonth(fwd.getMonth() + 1); }
+                else if (frequency === 'quarterly') { fwd.setMonth(fwd.getMonth() + 3); }
+                else if (frequency === 'biannual') { fwd.setMonth(fwd.getMonth() + 6); }
+                else if (frequency === 'yearly') { fwd.setFullYear(fwd.getFullYear() + 1); }
+                else if (frequency === 'biweekly') { fwd.setDate(fwd.getDate() + 14); }
+                else { break; }
+                dates.push(new Date(fwd));
+            }
+            return dates;
+        }
+
+        function formatDate(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + d;
+        }
+
+        function parseDate(dateStr) {
+            return new Date(dateStr + 'T00:00:00');
+        }
+
+        function getMonthBills(year, month) {
+            const monthBills = [];
+            const startOfMonth = new Date(year, month, 1);
+            const endOfMonth = new Date(year, month + 1, 0);
+
+            bills.forEach(bill => {
+                const dates = generateUpcomingDates(bill.dueDate, bill.frequency);
+
+                dates.forEach(date => {
+                    if (date >= startOfMonth && date <= endOfMonth) {
+                        const override = getOverride(bill.id, year, month);
+                        
+                        let displayBill = {
+                            ...bill,
+                            dueDate: formatDate(date),
+                            actualDate: date,
+                            instanceId: date.getTime(),
+                            hasOverride: !!override,
+                            paid: false
+                        };
+
+                        if (override) {
+                            if (override.amount !== undefined) displayBill.amount = override.amount;
+                            if (override.name !== undefined) displayBill.name = override.name;
+                            if (override.dueDate !== undefined) displayBill.dueDate = override.dueDate;
+                            if (override.category !== undefined) displayBill.category = override.category;
+                            if (override.paid !== undefined) displayBill.paid = override.paid;
+                        }
+
+                        monthBills.push(displayBill);
+                    }
+                });
+            });
+
+            monthBills.sort((a, b) => a.actualDate - b.actualDate);
+            return monthBills;
+        }
+
+        function getDaysUntilDue(dateStr) {
+            const due = parseDate(dateStr);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const diff = due - today;
+            return Math.floor(diff / (1000 * 60 * 60 * 24));
+        }
+
+        function formatDateDisplay(dateStr) {
+            const date = parseDate(dateStr);
+            const day = date.getDate();
+            const month = date.toLocaleDateString('en-US', { month: 'short' });
+            return month + ' ' + day;
+        }
+
+        function updateStats(monthBills) {
+            const unpaid = monthBills.filter(b => !b.paid);
+            const overdue = unpaid.filter(b => getDaysUntilDue(b.dueDate) < 0);
+
+            const totalDue = unpaid.reduce((sum, b) => sum + b.amount, 0);
+
+            document.getElementById('total-due').textContent = '$' + totalDue.toFixed(2);
+            document.getElementById('total-bills').textContent = unpaid.length;
+            document.getElementById('overdue-count').textContent = overdue.length;
+        }
+
+        function updateMonthDisplay() {
+            const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            document.getElementById('month-display').textContent = monthName;
+        }
+
+        function renderUpcomingWidget() {
+            const strip = document.getElementById('upcoming-strip');
+            const widget = document.getElementById('upcoming-widget');
+            strip.innerHTML = '';
+
+            const todayDate = new Date();
+            todayDate.setHours(0, 0, 0, 0);
+            const in7 = new Date(todayDate);
+            in7.setDate(in7.getDate() + 7);
+
+            const allUpcoming = [];
+            bills.forEach(bill => {
+                const dates = generateUpcomingDates(bill.dueDate, bill.frequency, 36);
+                dates.forEach(date => {
+                    if (date >= todayDate && date <= in7) {
+                        const override = getOverride(bill.id, date.getFullYear(), date.getMonth());
+                        const instance = { ...bill, dueDate: formatDate(date), actualDate: date, paid: false };
+                        if (override) {
+                            if (override.amount !== undefined) instance.amount = override.amount;
+                            if (override.name !== undefined) instance.name = override.name;
+                            if (override.category !== undefined) instance.category = override.category;
+                            if (override.paid !== undefined) instance.paid = override.paid;
+                        }
+                        if (!instance.paid) allUpcoming.push(instance);
+                    }
+                });
+            });
+
+            allUpcoming.sort((a, b) => a.actualDate - b.actualDate);
+
+            if (allUpcoming.length === 0) {
+                widget.style.display = 'none';
+                return;
+            }
+
+            widget.style.display = 'block';
+            allUpcoming.forEach(bill => {
+                const daysUntil = getDaysUntilDue(bill.dueDate);
+                const cat = bill.category || 'Other';
+                const catStyle = CATEGORIES[cat] || CATEGORIES['Other'];
+                const daysLabel = daysUntil === 0 ? 'Due Today!' : 'in ' + daysUntil + ' day' + (daysUntil === 1 ? '' : 's');
+                const daysColor = daysUntil === 0 ? '#ff3333' : daysUntil <= 3 ? '#ffaa00' : '#00ff88';
+
+                const chip = document.createElement('div');
+                chip.className = 'upcoming-chip';
+                chip.style.borderLeftColor = catStyle.color;
+                chip.innerHTML = '<div class="upcoming-chip-name">' + bill.name + '</div><div class="upcoming-chip-amount">$' + bill.amount.toFixed(2) + '</div><div class="upcoming-chip-days" style="color:' + daysColor + '">' + daysLabel + '</div>';
+                chip.addEventListener('click', () => showDetailModal(bill));
+                strip.appendChild(chip);
+            });
+        }
+
+        function renderListView() {
+            const billList = document.getElementById('bill-list');
+            const emptyState = document.getElementById('empty-state');
+            const monthBills = getMonthBills(currentMonth.getFullYear(), currentMonth.getMonth());
+
+            renderUpcomingWidget();
+            billList.innerHTML = '';
+
+            if (monthBills.length === 0) {
+                emptyState.style.display = 'flex';
+                updateStats([]);
+                return;
+            }
+
+            emptyState.style.display = 'none';
+
+            monthBills.forEach(bill => {
+                const daysUntil = getDaysUntilDue(bill.dueDate);
+                let statusClass = '';
+                if (bill.paid) {
+                    statusClass = 'paid';
+                } else if (daysUntil < 0) {
+                    statusClass = 'overdue';
+                } else if (daysUntil <= 7) {
+                    statusClass = 'due-soon';
+                }
+
+                const cat = bill.category || 'Other';
+                const catStyle = CATEGORIES[cat] || CATEGORIES['Other'];
+                const badge = '<span class="cat-badge" style="color:' + catStyle.color + ';background:' + catStyle.bg + '">' + cat + '</span>';
+                const autoPayHtml = bill.autoPay ? '<span class="autopay-badge">⚡ Auto-Pay</span>' : '';
+                const notesHtml = bill.notes ? '<div class="card-notes">📝 ' + bill.notes + '</div>' : '';
+
+                const card = document.createElement('div');
+                card.className = 'bill-card ' + statusClass + (bill.hasOverride ? ' has-override' : '');
+                card.innerHTML = '<div class="card-header"><div class="bill-name">' + bill.name + '<br>' + badge + autoPayHtml + notesHtml + '</div><div class="bill-amount">$' + bill.amount.toFixed(2) + '</div></div><div class="card-footer"><div class="bill-date">Due: ' + formatDateDisplay(bill.dueDate) + '</div><div class="bill-actions"><button type="button" class="btn-small btn-toggle ' + (bill.paid ? 'paid' : '') + '" data-id="' + bill.id + '" data-year="' + bill.actualDate.getFullYear() + '" data-month="' + bill.actualDate.getMonth() + '">' + (bill.paid ? 'Paid' : 'Mark') + '</button><button type="button" class="btn-small btn-delete" data-id="' + bill.id + '">Del</button></div></div>';
+
+                card.addEventListener('click', function(e) {
+                    if (e.target.closest('.btn-small')) return;
+                    showDetailModal(bill);
+                });
+
+                card.querySelector('.btn-toggle').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    togglePaid(this.dataset.id, parseInt(this.dataset.year), parseInt(this.dataset.month));
+                });
+
+                card.querySelector('.btn-delete').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    showDeleteConfirm(this.dataset.id, bill.dueDate);
+                });
+
+                billList.appendChild(card);
+            });
+
+            updateStats(monthBills);
+        }
+
+        function renderCalendarView() {
+            const grid = document.getElementById('calendar-grid');
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            const monthBills = getMonthBills(year, month);
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDayOfWeek = firstDay.getDay();
+
+            grid.innerHTML = '';
+
+            for (let i = 0; i < startingDayOfWeek; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day other-month';
+                grid.appendChild(emptyDay);
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayDate = new Date(year, month, day);
+                const dayStr = formatDate(dayDate);
+                const dayBills = monthBills.filter(b => b.dueDate === dayStr);
+
+                const dayEl = document.createElement('div');
+                dayEl.className = 'calendar-day';
+
+                if (dayDate.getTime() === today.getTime()) {
+                    dayEl.classList.add('today');
+                }
+
+                if (dayBills.length > 0) {
+                    dayEl.style.cursor = 'pointer';
+                    dayEl.addEventListener('click', () => {
+                        showDayBills(dayDate, dayBills);
+                    });
+                }
+
+                let html = '<div class="calendar-day-num">' + day + '</div>';
+                if (dayBills.length > 0) {
+                    html += '<div class="calendar-day-bills">';
+                    dayBills.forEach(bill => {
+                        const cat = bill.category || 'Other';
+                        const catStyle = CATEGORIES[cat] || CATEGORIES['Other'];
+                        const daysUntil = getDaysUntilDue(bill.dueDate);
+                        let dotStyle = 'background:' + catStyle.color + ';';
+                        if (bill.paid) {
+                            dotStyle += 'opacity:0.35;';
+                        } else if (daysUntil < 0) {
+                            dotStyle += 'box-shadow:0 0 0 2px #ff3333;';
+                        }
+                        html += '<div class="bill-dot" style="' + dotStyle + '" title="' + bill.name + '"></div>';
+                    });
+                    html += '</div>';
+                }
+
+                dayEl.innerHTML = html;
+                grid.appendChild(dayEl);
+            }
+
+            const totalCells = grid.children.length;
+            for (let i = totalCells; i < 42; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day other-month';
+                grid.appendChild(emptyDay);
+            }
+
+            updateStats(monthBills);
+        }
+
+        function showDayBills(dayDate, dayBills) {
+            const dayStr = dayDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+            document.getElementById('day-bills-title').textContent = dayStr;
+
+            const content = document.getElementById('day-bills-content');
+            content.innerHTML = '';
+
+            dayBills.forEach(bill => {
+                const daysUntil = getDaysUntilDue(bill.dueDate);
+                let statusClass = '';
+                if (bill.paid) {
+                    statusClass = 'paid';
+                } else if (daysUntil < 0) {
+                    statusClass = 'overdue';
+                } else if (daysUntil <= 7) {
+                    statusClass = 'due-soon';
+                }
+
+                const card = document.createElement('div');
+                card.className = 'bill-card ' + statusClass;
+                card.style.cursor = 'pointer';
+                card.innerHTML = '<div class="card-header"><div class="bill-name">' + bill.name + '</div><div class="bill-amount">$' + bill.amount.toFixed(2) + '</div></div>';
+
+                card.addEventListener('click', () => {
+                    closeDayBills();
+                    showEditDialog(bill);
+                });
+
+                content.appendChild(card);
+            });
+
+            document.getElementById('day-bills-sheet').classList.add('active');
+        }
+
+        function closeDayBills() {
+            document.getElementById('day-bills-sheet').classList.remove('active');
+        }
+
+        function getAnalyticsBills() {
+            const now = new Date();
+            const allInstances = [];
+
+            bills.forEach(bill => {
+                const dates = generateUpcomingDates(bill.dueDate, bill.frequency, 60);
+                dates.forEach(date => {
+                    const yr = date.getFullYear();
+                    const mo = date.getMonth();
+                    const override = getOverride(bill.id, yr, mo);
+                    const instance = { ...bill, actualDate: date, dueDate: formatDate(date) };
+                    if (override) {
+                        if (override.amount !== undefined) instance.amount = override.amount;
+                        if (override.category !== undefined) instance.category = override.category;
+                        if (override.name !== undefined) instance.name = override.name;
+                    }
+                    allInstances.push(instance);
+                });
+            });
+
+            if (analyticsPeriod === 'month') {
+                return allInstances.filter(b => {
+                    return b.actualDate.getFullYear() === currentMonth.getFullYear() &&
+                           b.actualDate.getMonth() === currentMonth.getMonth();
+                });
+            } else if (analyticsPeriod === 'year') {
+                return allInstances.filter(b => b.actualDate.getFullYear() === now.getFullYear());
+            } else {
+                return allInstances.filter(b => b.actualDate <= now);
+            }
+        }
+
+        function renderDonutChart(catTotals, grandTotal) {
+            const svg = document.getElementById('donut-svg');
+            const legend = document.getElementById('donut-legend');
+            svg.innerHTML = '';
+            legend.innerHTML = '';
+
+            const cx = 70, cy = 70, r = 52, stroke = 22;
+            const circ = 2 * Math.PI * r;
+            const sortedCats = Object.keys(catTotals).sort((a, b) => catTotals[b] - catTotals[a]);
+
+            if (grandTotal === 0) {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', cx);
+                circle.setAttribute('cy', cy);
+                circle.setAttribute('r', r);
+                circle.setAttribute('fill', 'none');
+                circle.setAttribute('stroke', '#333');
+                circle.setAttribute('stroke-width', stroke);
+                svg.appendChild(circle);
+                return;
+            }
+
+            let offset = 0;
+            sortedCats.forEach(cat => {
+                const total = catTotals[cat];
+                const seg = (total / grandTotal) * circ;
+                const style = CATEGORIES[cat] || CATEGORIES['Other'];
+
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', cx);
+                circle.setAttribute('cy', cy);
+                circle.setAttribute('r', r);
+                circle.setAttribute('fill', 'none');
+                circle.setAttribute('stroke', style.color);
+                circle.setAttribute('stroke-width', stroke);
+                circle.setAttribute('stroke-dasharray', seg + ' ' + (circ - seg));
+                circle.setAttribute('stroke-dashoffset', -offset);
+                circle.setAttribute('transform', 'rotate(-90 ' + cx + ' ' + cy + ')');
+                circle.setAttribute('stroke-linecap', 'butt');
+                svg.appendChild(circle);
+                offset += seg;
+
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                const pct = ((total / grandTotal) * 100).toFixed(0);
+                legendItem.innerHTML = '<div class="legend-dot" style="background:' + style.color + '"></div><span class="legend-name">' + cat + ' (' + pct + '%)</span><span class="legend-amt">$' + total.toFixed(0) + '</span>';
+                legend.appendChild(legendItem);
+            });
+
+            const centerText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            centerText.setAttribute('x', cx);
+            centerText.setAttribute('y', cy - 6);
+            centerText.setAttribute('text-anchor', 'middle');
+            centerText.setAttribute('fill', '#00ffff');
+            centerText.setAttribute('font-size', '11');
+            centerText.setAttribute('font-weight', 'bold');
+            centerText.textContent = 'Total';
+            svg.appendChild(centerText);
+
+            const centerAmt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            centerAmt.setAttribute('x', cx);
+            centerAmt.setAttribute('y', cy + 10);
+            centerAmt.setAttribute('text-anchor', 'middle');
+            centerAmt.setAttribute('fill', '#ff00ff');
+            centerAmt.setAttribute('font-size', '13');
+            centerAmt.setAttribute('font-weight', 'bold');
+            centerAmt.textContent = '$' + (grandTotal >= 1000 ? (grandTotal / 1000).toFixed(1) + 'k' : grandTotal.toFixed(0));
+            svg.appendChild(centerAmt);
+        }
+
+        function getMonthBillsForTrend(year, month) {
+            const monthBills = [];
+            const startOfMonth = new Date(year, month, 1);
+            const endOfMonth = new Date(year, month + 1, 0);
+
+            bills.forEach(bill => {
+                const billStart = parseDate(bill.dueDate);
+                if (billStart > endOfMonth) return;
+
+                const dates = generateBidirectionalDates(bill.dueDate, bill.frequency);
+                dates.forEach(date => {
+                    if (date >= startOfMonth && date <= endOfMonth) {
+                        const override = getOverride(bill.id, year, month);
+                        const instance = { ...bill, actualDate: date, dueDate: formatDate(date) };
+                        if (override && override.amount !== undefined) instance.amount = override.amount;
+                        monthBills.push(instance);
+                    }
+                });
+            });
+
+            return monthBills;
+        }
+
+        function renderTrendChart() {
+            const svg = document.getElementById('trend-svg');
+            svg.innerHTML = '';
+
+            const months = [];
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - i, 1);
+                months.push({ year: d.getFullYear(), month: d.getMonth() });
+            }
+
+            const monthTotals = months.map(m => {
+                const mb = getMonthBillsForTrend(m.year, m.month);
+                return mb.reduce((s, b) => s + b.amount, 0);
+            });
+
+            const maxVal = Math.max.apply(null, monthTotals.concat([1]));
+            const svgW = 340, svgH = 160;
+            const padL = 10, padR = 10, padT = 20, padB = 30;
+            const chartW = svgW - padL - padR;
+            const chartH = svgH - padT - padB;
+            const barW = Math.floor(chartW / 6) - 6;
+
+            const axisLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            axisLine.setAttribute('x1', padL);
+            axisLine.setAttribute('y1', padT + chartH);
+            axisLine.setAttribute('x2', svgW - padR);
+            axisLine.setAttribute('y2', padT + chartH);
+            axisLine.setAttribute('stroke', '#333');
+            axisLine.setAttribute('stroke-width', '1');
+            svg.appendChild(axisLine);
+
+            months.forEach((m, i) => {
+                const total = monthTotals[i];
+                const barH = total > 0 ? Math.max(4, (total / maxVal) * chartH) : 0;
+                const x = padL + i * (chartW / 6) + (chartW / 12) - barW / 2;
+                const y = padT + chartH - barH;
+                const isCurrentMonth = m.year === currentMonth.getFullYear() && m.month === currentMonth.getMonth();
+
+                if (barH > 0) {
+                    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttribute('x', x);
+                    rect.setAttribute('y', y);
+                    rect.setAttribute('width', barW);
+                    rect.setAttribute('height', barH);
+                    rect.setAttribute('rx', '3');
+                    rect.setAttribute('fill', isCurrentMonth ? '#00ffff' : '#00ffff66');
+                    svg.appendChild(rect);
+
+                    const valLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    valLabel.setAttribute('x', x + barW / 2);
+                    valLabel.setAttribute('y', y - 4);
+                    valLabel.setAttribute('text-anchor', 'middle');
+                    valLabel.setAttribute('fill', '#ff00ff');
+                    valLabel.setAttribute('font-size', '9');
+                    valLabel.setAttribute('font-weight', 'bold');
+                    valLabel.textContent = '$' + (total >= 1000 ? (total / 1000).toFixed(1) + 'k' : total.toFixed(0));
+                    svg.appendChild(valLabel);
+                }
+
+                const monthName = new Date(m.year, m.month, 1).toLocaleDateString('en-US', { month: 'short' });
+                const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                label.setAttribute('x', x + barW / 2);
+                label.setAttribute('y', padT + chartH + 16);
+                label.setAttribute('text-anchor', 'middle');
+                label.setAttribute('fill', isCurrentMonth ? '#00ffff' : '#777');
+                label.setAttribute('font-size', '10');
+                label.setAttribute('font-weight', isCurrentMonth ? 'bold' : 'normal');
+                label.textContent = monthName;
+                svg.appendChild(label);
+            });
+        }
+
+        function getPreviousAnalyticsBills() {
+            const now = new Date();
+            const allInstances = [];
+
+            bills.forEach(bill => {
+                const dates = generateUpcomingDates(bill.dueDate, bill.frequency, 60);
+                dates.forEach(date => {
+                    const yr = date.getFullYear();
+                    const mo = date.getMonth();
+                    const override = getOverride(bill.id, yr, mo);
+                    const instance = { ...bill, actualDate: date, dueDate: formatDate(date) };
+                    if (override) {
+                        if (override.amount !== undefined) instance.amount = override.amount;
+                        if (override.category !== undefined) instance.category = override.category;
+                        if (override.name !== undefined) instance.name = override.name;
+                    }
+                    allInstances.push(instance);
+                });
+            });
+
+            if (analyticsPeriod === 'month') {
+                const prevY = currentMonth.getMonth() === 0 ? currentMonth.getFullYear() - 1 : currentMonth.getFullYear();
+                const prevM = currentMonth.getMonth() === 0 ? 11 : currentMonth.getMonth() - 1;
+                return allInstances.filter(b => b.actualDate.getFullYear() === prevY && b.actualDate.getMonth() === prevM);
+            } else if (analyticsPeriod === 'year') {
+                return allInstances.filter(b => b.actualDate.getFullYear() === now.getFullYear() - 1);
+            }
+            return [];
+        }
+
+        function formatChange(current, previous, prevLabel) {
+            if (previous === 0) return '<span class="bill-change-new">NEW</span>';
+            if (current === previous) return '<span class="bill-change-neutral">━ same as ' + prevLabel + '</span>';
+            const pct = ((current - previous) / previous) * 100;
+            const sign = pct > 0 ? '+' : '';
+            if (pct > 0) return '<span class="bill-change-up">↑ ' + sign + pct.toFixed(1) + '% vs ' + prevLabel + '</span>';
+            return '<span class="bill-change-down">↓ ' + pct.toFixed(1) + '% vs ' + prevLabel + '</span>';
+        }
+
+        function renderAnalyticsView() {
+            const instances = getAnalyticsBills();
+            const grandTotal = instances.reduce((s, b) => s + b.amount, 0);
+            const prevInstances = getPreviousAnalyticsBills();
+            const prevTotal = prevInstances.reduce((s, b) => s + b.amount, 0);
+
+            document.getElementById('analytics-grand-total').textContent = '$' + grandTotal.toFixed(2);
+
+            const periodLabelEl = document.getElementById('analytics-period-label');
+            let prevLabel = '';
+            if (analyticsPeriod === 'month') {
+                periodLabelEl.textContent = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                const prevD = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+                prevLabel = prevD.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+            } else if (analyticsPeriod === 'year') {
+                periodLabelEl.textContent = new Date().getFullYear() + ' Year to Date';
+                prevLabel = String(new Date().getFullYear() - 1);
+            } else {
+                periodLabelEl.textContent = 'All Time';
+            }
+
+            const changeEl = document.getElementById('analytics-change');
+            if (prevLabel && prevTotal > 0) {
+                const pctChange = ((grandTotal - prevTotal) / prevTotal) * 100;
+                const sign = pctChange >= 0 ? '+' : '';
+                const cls = pctChange > 0.05 ? 'change-up' : pctChange < -0.05 ? 'change-down' : 'change-neutral';
+                const arrow = pctChange > 0.05 ? '↑' : pctChange < -0.05 ? '↓' : '━';
+                changeEl.innerHTML = '<span class="analytics-change ' + cls + '">' + arrow + ' ' + sign + pctChange.toFixed(1) + '% vs ' + prevLabel + '</span>';
+            } else if (prevLabel && prevTotal === 0 && grandTotal > 0) {
+                changeEl.innerHTML = '<span class="analytics-change bill-change-new">NEW DATA</span>';
+            } else {
+                changeEl.innerHTML = '';
+            }
+
+            const catTotals = {};
+            instances.forEach(b => {
+                const cat = b.category || 'Other';
+                catTotals[cat] = (catTotals[cat] || 0) + b.amount;
+            });
+
+            renderDonutChart(catTotals, grandTotal);
+            renderTrendChart();
+
+            // Build prev period bill totals for comparison
+            const prevBillTotals = {};
+            prevInstances.forEach(b => {
+                prevBillTotals[b.name] = (prevBillTotals[b.name] || 0) + b.amount;
+            });
+
+            const billEl = document.getElementById('analytics-bills');
+            billEl.innerHTML = '';
+            if (instances.length === 0) {
+                billEl.innerHTML = '<div class="no-analytics">No data for this period</div>';
+            } else {
+                const billTotals = {};
+                const billCats = {};
+                const billCounts = {};
+                instances.forEach(b => {
+                    billTotals[b.name] = (billTotals[b.name] || 0) + b.amount;
+                    billCats[b.name] = b.category || 'Other';
+                    billCounts[b.name] = (billCounts[b.name] || 0) + 1;
+                });
+                const sortedBills = Object.keys(billTotals).sort((a, b) => billTotals[b] - billTotals[a]);
+                sortedBills.forEach(name => {
+                    const total = billTotals[name];
+                    const cat = billCats[name];
+                    const count = billCounts[name];
+                    const style = CATEGORIES[cat] || CATEGORIES['Other'];
+                    const countLabel = count > 1 ? count + ' payments' : '1 payment';
+                    const prevAmt = prevBillTotals[name] || 0;
+                    const changeHtml = prevLabel ? formatChange(total, prevAmt, prevLabel) : '';
+                    const row = document.createElement('div');
+                    row.className = 'bill-row';
+                    row.innerHTML = '<div><div class="bill-row-name">' + name + '</div><span class="cat-badge" style="color:' + style.color + ';background:' + style.bg + '">' + cat + '</span></div><div class="bill-row-meta"><div class="bill-row-amount">$' + total.toFixed(2) + '</div><div class="bill-row-sub">' + countLabel + '</div>' + (changeHtml ? '<div>' + changeHtml + '</div>' : '') + '</div>';
+                    billEl.appendChild(row);
+                });
+            }
+        }
+
+        // ===== CASH FLOW ENGINE =====
+        // Build a chronological list of money events from a start date to an end date,
+        // each carrying a running balance. Bills are negative, income positive.
+        function buildCashFlow(rangeStart, rangeEnd, startingBalance) {
+            const events = [];
+
+            // Bills (unpaid only count against the balance; paid ones already left the account)
+            bills.forEach(bill => {
+                const dates = generateBidirectionalDates(bill.dueDate, bill.frequency, 36, 36);
+                dates.forEach(date => {
+                    if (date >= rangeStart && date <= rangeEnd) {
+                        const override = getOverride(bill.id, date.getFullYear(), date.getMonth());
+                        let amount = bill.amount;
+                        let name = bill.name;
+                        let paid = false;
+                        if (override) {
+                            if (override.amount !== undefined) amount = override.amount;
+                            if (override.name !== undefined) name = override.name;
+                            if (override.paid !== undefined) paid = override.paid;
+                        }
+                        events.push({
+                            date: new Date(date),
+                            name: name,
+                            amount: -Math.abs(amount),
+                            type: 'bill',
+                            paid: paid
+                        });
+                    }
+                });
+            });
+
+            // Income
+            getIncome().forEach(inc => {
+                const dates = generateIncomeDates(inc.dueDate, inc.frequency, rangeStart, rangeEnd);
+                dates.forEach(date => {
+                    events.push({
+                        date: new Date(date),
+                        name: inc.name,
+                        amount: Math.abs(inc.amount),
+                        type: 'income',
+                        paid: false
+                    });
+                });
+            });
+
+            events.sort((a, b) => {
+                const d = a.date - b.date;
+                if (d !== 0) return d;
+                return b.amount - a.amount; // income before bills on the same day
+            });
+
+            // Running balance. Paid bills don't subtract again (already gone) but
+            // we still show them as informational with no balance impact.
+            let bal = startingBalance;
+            events.forEach(ev => {
+                if (ev.type === 'bill' && ev.paid) {
+                    ev.balance = bal; // no change
+                    ev.applied = false;
+                } else {
+                    bal += ev.amount;
+                    ev.balance = bal;
+                    ev.applied = true;
+                }
+            });
+
+            return events;
+        }
+
+        function startOfToday() {
+            const t = new Date();
+            t.setHours(0, 0, 0, 0);
+            return t;
+        }
+
+        function renderCashFlowView() {
+            const income = getIncome();
+            const balance = getBalance();
+            const empty = document.getElementById('cashflow-empty');
+            const haveSetup = income.length > 0 || balance;
+
+            const timelineEl = document.getElementById('cashflow-timeline');
+            const summaryEl = document.getElementById('cf-summary');
+            const legendEl = document.getElementById('cashflow-legend');
+
+            if (!haveSetup) {
+                empty.style.display = 'block';
+                timelineEl.innerHTML = '';
+                summaryEl.innerHTML = '';
+                legendEl.innerHTML = '';
+                document.getElementById('cashflow-svg').innerHTML = '';
+                document.getElementById('safe-amount').textContent = '$0';
+                document.getElementById('safe-sub').textContent = 'Set up cash flow to begin';
+                return;
+            }
+            empty.style.display = 'none';
+
+            const today = startOfToday();
+            const startBal = balance ? balance.amount : 0;
+            const balDate = balance ? parseDate(balance.date) : today;
+
+            // Timeline spans from the balance date (or today) through end of the viewed month,
+            // but at least 45 days forward so "safe to spend" has a horizon.
+            const rangeStart = balDate < today ? balDate : today;
+            const viewEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+            const minEnd = new Date(today);
+            minEnd.setDate(minEnd.getDate() + 45);
+            const rangeEnd = viewEnd > minEnd ? viewEnd : minEnd;
+
+            const events = buildCashFlow(rangeStart, rangeEnd, startBal);
+
+            // ---- Safe to Spend: balance now minus all unpaid bills before next income ----
+            let balanceNow = startBal;
+            events.forEach(ev => {
+                if (ev.date <= today && ev.applied) balanceNow = ev.balance;
+            });
+            // Re-derive "balance as of today" cleanly:
+            balanceNow = startBal;
+            const futureEvents = [];
+            events.forEach(ev => {
+                if (ev.date <= today) {
+                    if (ev.applied) balanceNow = ev.balance;
+                } else {
+                    futureEvents.push(ev);
+                }
+            });
+
+            // Find next income date after today
+            let nextIncome = null;
+            for (let i = 0; i < futureEvents.length; i++) {
+                if (futureEvents[i].type === 'income') { nextIncome = futureEvents[i]; break; }
+            }
+            // Bills due between now and next income (exclusive of income date)
+            let billsBeforeIncome = 0;
+            for (let i = 0; i < futureEvents.length; i++) {
+                const ev = futureEvents[i];
+                if (nextIncome && ev.date >= nextIncome.date) break;
+                if (ev.type === 'bill' && ev.applied) billsBeforeIncome += Math.abs(ev.amount);
+            }
+            const safe = balanceNow - billsBeforeIncome;
+
+            const safeBox = document.getElementById('safe-box');
+            const safeAmt = document.getElementById('safe-amount');
+            const safeSub = document.getElementById('safe-sub');
+            safeAmt.textContent = (safe < 0 ? '-$' : '$') + Math.abs(safe).toFixed(2);
+            safeBox.classList.remove('warn', 'danger');
+            if (safe < 0) safeBox.classList.add('danger');
+            else if (safe < 100) safeBox.classList.add('warn');
+            if (nextIncome) {
+                safeSub.textContent = 'After $' + billsBeforeIncome.toFixed(2) + ' in bills due before ' +
+                    nextIncome.name + ' on ' + formatDateDisplay(formatDate(nextIncome.date));
+            } else {
+                safeSub.textContent = 'After $' + billsBeforeIncome.toFixed(2) + ' in upcoming bills (no income scheduled)';
+            }
+
+            // ---- Summary stats: lowest projected balance + when ----
+            let lowest = { balance: Infinity, date: null };
+            events.forEach(ev => {
+                if (ev.date >= today && ev.applied && ev.balance < lowest.balance) {
+                    lowest = { balance: ev.balance, date: ev.date };
+                }
+            });
+            if (lowest.date === null) lowest = { balance: balanceNow, date: today };
+
+            const incomeTotal = events
+                .filter(ev => ev.type === 'income' && ev.date >= today)
+                .reduce((s, ev) => s + ev.amount, 0);
+
+            summaryEl.innerHTML =
+                '<div class="cf-stat"><div class="cf-stat-val" style="color:#00ffff;">$' + balanceNow.toFixed(2) + '</div><div class="cf-stat-label">Balance Today</div></div>' +
+                '<div class="cf-stat"><div class="cf-stat-val" style="color:' + (lowest.balance < 0 ? '#ff3333' : '#ffff00') + ';">$' + lowest.balance.toFixed(2) + '</div><div class="cf-stat-label">Low: ' + (lowest.date ? formatDateDisplay(formatDate(lowest.date)) : '—') + '</div></div>' +
+                '<div class="cf-stat"><div class="cf-stat-val" style="color:#00ff88;">$' + incomeTotal.toFixed(2) + '</div><div class="cf-stat-label">Income Ahead</div></div>';
+
+            legendEl.innerHTML =
+                '<span style="color:#00ffff;">Balance</span>' +
+                '<span style="color:#ff3333;">Zero line</span>';
+
+            renderCashFlowChart(events, today, startBal, rangeStart, rangeEnd);
+            renderCashFlowTimeline(futureEvents, today);
+        }
+
+        function renderCashFlowChart(events, today, startBal, rangeStart, rangeEnd) {
+            const svg = document.getElementById('cashflow-svg');
+            const W = 340, H = 180, padL = 8, padR = 8, padT = 14, padB = 22;
+
+            // Build a balance-over-time series sampled at each event (applied ones)
+            const pts = [];
+            let bal = startBal;
+            pts.push({ t: rangeStart.getTime(), bal: bal });
+            events.forEach(ev => {
+                if (ev.applied) {
+                    bal = ev.balance;
+                    pts.push({ t: ev.date.getTime(), bal: bal });
+                }
+            });
+            pts.push({ t: rangeEnd.getTime(), bal: bal });
+
+            const tMin = rangeStart.getTime(), tMax = rangeEnd.getTime();
+            let bMin = Math.min(0, ...pts.map(p => p.bal));
+            let bMax = Math.max(...pts.map(p => p.bal), 0);
+            if (bMax === bMin) bMax = bMin + 100;
+            const pad = (bMax - bMin) * 0.1;
+            bMin -= pad; bMax += pad;
+
+            const xOf = t => padL + ((t - tMin) / (tMax - tMin || 1)) * (W - padL - padR);
+            const yOf = b => padT + (1 - (b - bMin) / (bMax - bMin || 1)) * (H - padT - padB);
+
+            let svgStr = '';
+
+            // Zero line
+            if (bMin < 0 && bMax > 0) {
+                const zy = yOf(0);
+                svgStr += '<line x1="' + padL + '" y1="' + zy + '" x2="' + (W - padR) + '" y2="' + zy + '" stroke="#ff3333" stroke-width="1" stroke-dasharray="4 3" opacity="0.6"/>';
+            }
+
+            // Today marker
+            const tx = xOf(today.getTime());
+            svgStr += '<line x1="' + tx + '" y1="' + padT + '" x2="' + tx + '" y2="' + (H - padB) + '" stroke="#555" stroke-width="1" stroke-dasharray="2 2"/>';
+            svgStr += '<text x="' + tx + '" y="' + (H - padB + 14) + '" fill="#888" font-size="8" text-anchor="middle">today</text>';
+
+            // Step path (balance holds flat then jumps at events)
+            let d = '';
+            for (let i = 0; i < pts.length; i++) {
+                const x = xOf(pts[i].t), y = yOf(pts[i].bal);
+                if (i === 0) d += 'M' + x.toFixed(1) + ',' + y.toFixed(1);
+                else {
+                    const prevY = yOf(pts[i - 1].bal);
+                    d += ' L' + x.toFixed(1) + ',' + prevY.toFixed(1) + ' L' + x.toFixed(1) + ',' + y.toFixed(1);
+                }
+            }
+            // Area fill under the line
+            const areaD = d + ' L' + xOf(pts[pts.length - 1].t).toFixed(1) + ',' + yOf(bMin).toFixed(1) +
+                ' L' + xOf(pts[0].t).toFixed(1) + ',' + yOf(bMin).toFixed(1) + ' Z';
+            svgStr += '<path d="' + areaD + '" fill="rgba(0,255,255,0.08)"/>';
+            svgStr += '<path d="' + d + '" fill="none" stroke="#00ffff" stroke-width="2"/>';
+
+            // Interactive dots with tooltips (touch/hover, per project standard)
+            let dots = '';
+            bal = startBal;
+            events.forEach(ev => {
+                if (!ev.applied) return;
+                const x = xOf(ev.date.getTime()), y = yOf(ev.balance);
+                const col = ev.type === 'income' ? '#00ff88' : (ev.balance < 0 ? '#ff3333' : '#00ffff');
+                const label = formatDateDisplay(formatDate(ev.date)) + ' · ' + ev.name + ' · ' +
+                    (ev.amount >= 0 ? '+' : '-') + '$' + Math.abs(ev.amount).toFixed(2) +
+                    ' → $' + ev.balance.toFixed(2);
+                dots += '<circle class="cf-dot" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3.5" fill="' + col + '" data-label="' + label.replace(/"/g, '&quot;') + '" style="cursor:pointer;"/>';
+            });
+            svgStr += dots;
+
+            svg.innerHTML = svgStr;
+            wireChartTooltips(svg);
+        }
+
+        function wireChartTooltips(svg) {
+            let tip = document.getElementById('cf-tooltip');
+            if (!tip) {
+                tip = document.createElement('div');
+                tip.id = 'cf-tooltip';
+                tip.style.cssText = 'position:fixed;z-index:1500;background:#000;border:1px solid #00ffff;color:#e8e8e8;padding:0.4rem 0.6rem;border-radius:6px;font-size:0.72rem;pointer-events:none;display:none;max-width:200px;line-height:1.3;';
+                document.body.appendChild(tip);
+            }
+            const dots = svg.querySelectorAll('.cf-dot');
+            const show = (e, el) => {
+                const r = (e.touches ? e.touches[0] : e);
+                tip.textContent = el.getAttribute('data-label');
+                tip.style.display = 'block';
+                let lx = r.clientX + 10, ly = r.clientY - 10;
+                if (lx + 200 > window.innerWidth) lx = window.innerWidth - 210;
+                tip.style.left = lx + 'px';
+                tip.style.top = ly + 'px';
+            };
+            const hide = () => { tip.style.display = 'none'; };
+            dots.forEach(dot => {
+                dot.addEventListener('mouseenter', e => show(e, dot));
+                dot.addEventListener('mousemove', e => show(e, dot));
+                dot.addEventListener('mouseleave', hide);
+                dot.addEventListener('touchstart', e => { show(e, dot); }, { passive: true });
+            });
+            document.addEventListener('touchstart', e => {
+                if (e.target && e.target.classList && e.target.classList.contains('cf-dot')) return;
+                hide();
+            }, { passive: true });
+        }
+
+        function renderCashFlowTimeline(futureEvents, today) {
+            const el = document.getElementById('cashflow-timeline');
+            if (!futureEvents.length) {
+                el.innerHTML = '<div style="color:#666;text-align:center;padding:1rem;font-size:0.85rem;">No upcoming income or bills in range.</div>';
+                return;
+            }
+            let html = '';
+            futureEvents.slice(0, 40).forEach(ev => {
+                const isIncome = ev.type === 'income';
+                const amtCol = isIncome ? '#00ff88' : '#ff8888';
+                const sign = isIncome ? '+' : '-';
+                const negClass = (ev.applied && ev.balance < 0) ? ' neg-bal' : '';
+                const paidTag = (ev.type === 'bill' && ev.paid) ? ' <span style="color:#00ff88;font-size:0.68rem;">(paid)</span>' : '';
+                html += '<div class="cf-event' + negClass + '">' +
+                    '<div class="cf-event-left">' +
+                        '<div class="cf-event-name">' + (isIncome ? '💵 ' : '') + ev.name + paidTag + '</div>' +
+                        '<div class="cf-event-date">' + formatDateDisplay(formatDate(ev.date)) + '</div>' +
+                    '</div>' +
+                    '<div class="cf-event-right">' +
+                        '<div class="cf-event-amt" style="color:' + amtCol + ';">' + sign + '$' + Math.abs(ev.amount).toFixed(2) + '</div>' +
+                        '<div class="cf-event-bal">' + (ev.applied ? '$' + ev.balance.toFixed(2) : 'already paid') + '</div>' +
+                    '</div>' +
+                '</div>';
+            });
+            el.innerHTML = html;
+        }
+
+        function render() {
+            updateMonthDisplay();
+            const monthNav = document.getElementById('month-nav');
+            const fab = document.getElementById('add-bill-btn');
+            if (currentView === 'analytics') {
+                monthNav.style.display = analyticsPeriod === 'month' ? 'flex' : 'none';
+                fab.style.display = 'none';
+                renderAnalyticsView();
+            } else if (currentView === 'cashflow') {
+                monthNav.style.display = 'flex';
+                fab.style.display = 'none';
+                renderCashFlowView();
+            } else {
+                monthNav.style.display = 'flex';
+                fab.style.display = 'flex';
+                if (currentView === 'list') {
+                    renderListView();
+                } else {
+                    renderCalendarView();
+                }
+            }
+        }
+
+        function togglePaid(billId, year, month) {
+            const existing = getOverride(billId, year, month) || {};
+            existing.paid = !existing.paid;
+            setOverride(billId, year, month, existing);
+            saveBills();
+        }
+
+        function showEditDialog(bill) {
+            editingId = bill.id;
+            editingMonth = currentMonth.getMonth();
+            editScope = 'month';
+            document.getElementById('scope-month').classList.add('active');
+            document.getElementById('scope-template').classList.remove('active');
+            updateScopeInfo();
+            loadBillForm(bill);
+            document.getElementById('scope-selector').style.display = 'block';
+            document.getElementById('modal-title').textContent = 'Edit Bill';
+            showModal();
+        }
+
+        function updateScopeInfo() {
+            const info = document.getElementById('scope-info');
+            if (editScope === 'month') {
+                const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                info.textContent = 'Editing ' + monthName + ' only. Other months use template.';
+            } else {
+                info.textContent = 'Editing template. Changes affect all months (unless overridden).';
+            }
+        }
+
+        function loadBillForm(bill) {
+            document.getElementById('bill-name').value = bill.name;
+            document.getElementById('bill-amount').value = bill.amount;
+            document.getElementById('bill-category').value = bill.category || 'Other';
+            document.getElementById('bill-date').value = bill.dueDate;
+            document.getElementById('bill-frequency').value = bill.frequency;
+            document.getElementById('bill-notes').value = bill.notes || '';
+            document.getElementById('bill-autopay').checked = !!(bill.autoPay);
+            document.getElementById('frequency-group').style.display = editScope === 'template' ? 'block' : 'none';
+            document.getElementById('autopay-group').style.display = editScope === 'template' ? 'block' : 'none';
+
+            const override = getOverride(bill.id, currentMonth.getFullYear(), currentMonth.getMonth());
+            const resetGroup = document.getElementById('reset-group');
+            if (override && editScope === 'month') {
+                resetGroup.style.display = 'block';
+            } else {
+                resetGroup.style.display = 'none';
+            }
+
+            updateFrequencyNote();
+        }
+
+        function showModal() {
+            document.getElementById('bill-modal').classList.add('active');
+        }
+
+        function hideModal() {
+            document.getElementById('bill-modal').classList.remove('active');
+            editingId = null;
+            editingMonth = null;
+            document.getElementById('bill-form').reset();
+        }
+
+        function showDeleteConfirm(billId, dueDate) {
+            deletingId = billId;
+            const dateObj = parseDate(dueDate);
+            deletingInstanceMonth = dateObj.getMonth();
+            const monthName = dateObj.toLocaleDateString('en-US', { month: 'long' });
+            document.getElementById('delete-text').textContent = 'Delete ' + monthName + ' instance only, or the entire recurring bill?';
+            document.getElementById('delete-confirm').classList.add('active');
+        }
+
+        function hideDeleteConfirm() {
+            document.getElementById('delete-confirm').classList.remove('active');
+            deletingId = null;
+            deletingInstanceMonth = null;
+        }
+
+        function processAutoPayBills() {
+            const todayEnd = new Date();
+            todayEnd.setHours(23, 59, 59, 999);
+            let changed = false;
+
+            bills.forEach(bill => {
+                if (!bill.autoPay) return;
+                const dates = generateUpcomingDates(bill.dueDate, bill.frequency, 60);
+                dates.forEach(date => {
+                    if (date <= todayEnd) {
+                        const yr = date.getFullYear();
+                        const mo = date.getMonth();
+                        const existing = getOverride(bill.id, yr, mo) || {};
+                        if (!existing.paid) {
+                            existing.paid = true;
+                            setOverride(bill.id, yr, mo, existing);
+                            changed = true;
+                        }
+                    }
+                });
+            });
+
+            if (changed) {
+                localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
+            }
+        }
+        function deleteBill() {
+            if (deletingId) {
+                bills = bills.filter(b => b.id !== deletingId);
+                saveBills();
+                hideDeleteConfirm();
+            }
+        }
+
+        function addOrUpdateBill(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('bill-name').value;
+            const amount = parseFloat(document.getElementById('bill-amount').value);
+            const category = document.getElementById('bill-category').value;
+            const dueDate = document.getElementById('bill-date').value;
+            const frequency = document.getElementById('bill-frequency').value;
+            const notes = document.getElementById('bill-notes').value.trim();
+            const autoPay = document.getElementById('bill-autopay').checked;
+
+            if (editingId) {
+                if (editScope === 'template') {
+                    const bill = bills.find(b => b.id === editingId);
+                    if (bill) {
+                        bill.name = name;
+                        bill.amount = amount;
+                        bill.category = category;
+                        bill.dueDate = dueDate;
+                        bill.frequency = frequency;
+                        bill.notes = notes;
+                        bill.autoPay = autoPay;
+                    }
+                } else {
+                    const override = {
+                        name: name,
+                        amount: amount,
+                        category: category,
+                        dueDate: dueDate,
+                        notes: notes
+                    };
+                    setOverride(editingId, currentMonth.getFullYear(), currentMonth.getMonth(), override);
+                }
+            } else {
+                bills.push({
+                    id: Date.now().toString(),
+                    name: name,
+                    amount: amount,
+                    category: category,
+                    dueDate: dueDate,
+                    frequency: frequency,
+                    notes: notes,
+                    autoPay: autoPay,
+                    paid: false
+                });
+            }
+
+            saveBills();
+            processAutoPayBills();
+            hideModal();
+        }
+
+        function updateFrequencyNote() {
+            const frequency = document.getElementById('bill-frequency').value;
+            const noteEl = document.getElementById('frequency-note');
+
+            const notes = {
+                'one-time': 'This bill appears once',
+                'monthly': 'This bill repeats every month',
+                'biweekly': 'This bill repeats every 2 weeks',
+                'quarterly': 'This bill repeats every 3 months',
+                'biannual': 'This bill repeats every 6 months',
+                'yearly': 'This bill repeats every year'
+            };
+
+            noteEl.textContent = notes[frequency] || '';
+        }
+
+        let detailBillId = null;
+        let detailBillInstance = null;
+
+        function showDetailModal(bill) {
+            detailBillId = bill.id;
+            detailBillInstance = bill;
+            const templateBill = bills.find(b => b.id === bill.id) || bill;
+            const cat = bill.category || 'Other';
+            const catStyle = CATEGORIES[cat] || CATEGORIES['Other'];
+
+            document.getElementById('detail-name').textContent = bill.name;
+            const badge = document.getElementById('detail-cat-badge');
+            badge.textContent = cat;
+            badge.style.color = catStyle.color;
+            badge.style.background = catStyle.bg;
+
+            const freqMap = {
+                'one-time': 'One-time',
+                'monthly': 'Monthly',
+                'biweekly': 'Biweekly',
+                'quarterly': 'Quarterly',
+                'biannual': 'Biannual',
+                'yearly': 'Yearly'
+            };
+            document.getElementById('detail-frequency').textContent = freqMap[templateBill.frequency] || templateBill.frequency;
+
+            const notesText = bill.notes || templateBill.notes || '';
+            const notesSection = document.getElementById('detail-notes-section');
+            if (notesText) {
+                notesSection.style.display = 'block';
+                document.getElementById('detail-notes-text').textContent = notesText;
+            } else {
+                notesSection.style.display = 'none';
+            }
+
+            const historyEl = document.getElementById('detail-history');
+            historyEl.innerHTML = '';
+            const todayNow = new Date();
+            todayNow.setHours(0, 0, 0, 0);
+            const billStart = parseDate(templateBill.dueDate);
+            let rowsAdded = 0;
+            const amountSeries = [];
+
+            for (let i = -6; i <= 6; i++) {
+                const d = new Date(todayNow.getFullYear(), todayNow.getMonth() + i, 1);
+                const yr = d.getFullYear();
+                const mo = d.getMonth();
+
+                const monthBills = getMonthBills(yr, mo);
+                const match = monthBills.find(b => b.id === bill.id);
+
+                if (!match) continue;
+                rowsAdded++;
+
+                const monthLabel = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                const isCurrentMonth = yr === todayNow.getFullYear() && mo === todayNow.getMonth();
+                const isFuture = parseDate(match.dueDate) > todayNow;
+
+                amountSeries.push({
+                    label: monthLabel,
+                    amount: match.amount,
+                    future: isFuture,
+                    current: isCurrentMonth
+                });
+
+                let statusClass, statusLabel;
+                if (match.paid) {
+                    statusClass = 'paid';
+                    statusLabel = 'Paid';
+                } else if (isFuture) {
+                    statusClass = 'future';
+                    statusLabel = 'Upcoming';
+                } else {
+                    statusClass = 'unpaid';
+                    statusLabel = 'Unpaid';
+                }
+
+                const row = document.createElement('div');
+                row.className = 'history-row';
+                if (isCurrentMonth) row.style.background = 'rgba(0,255,255,0.06)';
+                row.innerHTML = '<span class="history-month" style="' + (isCurrentMonth ? 'color:#00ffff;font-weight:700' : '') + '">' + monthLabel + '</span><span class="history-amount">$' + match.amount.toFixed(2) + '</span><span class="history-status ' + statusClass + '">' + statusLabel + '</span>';
+                historyEl.appendChild(row);
+            }
+
+            if (rowsAdded === 0) {
+                historyEl.innerHTML = '<div style="color:#666;text-align:center;padding:1rem;">No history found in this range</div>';
+            }
+
+            renderAmountHistoryChart(amountSeries);
+
+            document.getElementById('detail-modal').classList.add('active');
+        }
+
+        function renderAmountHistoryChart(series) {
+            const wrap = document.getElementById('detail-chart-wrap');
+            const varEl = document.getElementById('detail-variance');
+            const svg = document.getElementById('detail-chart-svg');
+
+            // Need at least 2 points to show variance meaningfully
+            if (!series || series.length < 2) {
+                wrap.style.display = 'none';
+                varEl.textContent = series && series.length === 1
+                    ? 'Only one month on record so far.'
+                    : '';
+                svg.innerHTML = '';
+                return;
+            }
+
+            const amounts = series.map(s => s.amount);
+            const allSame = amounts.every(a => Math.abs(a - amounts[0]) < 0.005);
+
+            // Variance summary line
+            const min = Math.min.apply(null, amounts);
+            const max = Math.max.apply(null, amounts);
+            const avg = amounts.reduce((s, a) => s + a, 0) / amounts.length;
+            if (allSame) {
+                varEl.textContent = 'Fixed amount — $' + amounts[0].toFixed(2) + ' every month.';
+            } else {
+                varEl.innerHTML = 'Low <span style="color:#00ff88;">$' + min.toFixed(2) +
+                    '</span> · Avg <span style="color:#00ffff;">$' + avg.toFixed(2) +
+                    '</span> · High <span style="color:#ff8800;">$' + max.toFixed(2) + '</span>';
+            }
+
+            wrap.style.display = 'block';
+
+            const W = 340, H = 150, padL = 8, padR = 8, padT = 14, padB = 26;
+            const n = series.length;
+            const gap = 4;
+            const slotW = (W - padL - padR) / n;
+            const barW = Math.max(6, slotW - gap);
+
+            const yMax = max * 1.15 || 1;
+            const yMin = 0;
+            const yOf = v => padT + (1 - (v - yMin) / (yMax - yMin || 1)) * (H - padT - padB);
+
+            let s = '';
+
+            // Average reference line
+            if (!allSame) {
+                const ay = yOf(avg);
+                s += '<line x1="' + padL + '" y1="' + ay + '" x2="' + (W - padR) + '" y2="' + ay + '" stroke="#00ffff" stroke-width="1" stroke-dasharray="4 3" opacity="0.4"/>';
+            }
+
+            series.forEach((pt, i) => {
+                const x = padL + i * slotW + (slotW - barW) / 2;
+                const y = yOf(pt.amount);
+                const h = (H - padB) - y;
+                let col;
+                if (pt.current) col = '#00ffff';
+                else if (pt.future) col = '#555';
+                else if (pt.amount >= max - 0.005 && !allSame) col = '#ff8800';
+                else if (pt.amount <= min + 0.005 && !allSame) col = '#00ff88';
+                else col = '#0a8a8a';
+
+                const label = pt.label + ' · $' + pt.amount.toFixed(2) +
+                    (allSame ? '' : (pt.amount > avg ? ' (above avg)' : pt.amount < avg ? ' (below avg)' : ''));
+                s += '<rect class="hist-bar" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) +
+                    '" width="' + barW.toFixed(1) + '" height="' + Math.max(0, h).toFixed(1) +
+                    '" rx="2" fill="' + col + '"' + (pt.future ? ' opacity="0.5"' : '') +
+                    ' data-label="' + label.replace(/"/g, '&quot;') + '" style="cursor:pointer;"/>';
+
+                // x-axis label every other bar to avoid crowding
+                if (n <= 8 || i % 2 === 0) {
+                    s += '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (H - padB + 14) +
+                        '" fill="#777" font-size="8" text-anchor="middle">' + pt.label.split(' ')[0] + '</text>';
+                }
+            });
+
+            svg.innerHTML = s;
+            wireBarTooltips(svg);
+        }
+
+        function wireBarTooltips(svg) {
+            let tip = document.getElementById('cf-tooltip');
+            if (!tip) {
+                tip = document.createElement('div');
+                tip.id = 'cf-tooltip';
+                tip.style.cssText = 'position:fixed;z-index:1500;background:#000;border:1px solid #00ffff;color:#e8e8e8;padding:0.4rem 0.6rem;border-radius:6px;font-size:0.72rem;pointer-events:none;display:none;max-width:200px;line-height:1.3;';
+                document.body.appendChild(tip);
+            }
+            const bars = svg.querySelectorAll('.hist-bar');
+            const show = (e, el) => {
+                const r = (e.touches ? e.touches[0] : e);
+                tip.textContent = el.getAttribute('data-label');
+                tip.style.display = 'block';
+                let lx = r.clientX + 10, ly = r.clientY - 10;
+                if (lx + 200 > window.innerWidth) lx = window.innerWidth - 210;
+                tip.style.left = lx + 'px';
+                tip.style.top = ly + 'px';
+            };
+            const hide = () => { tip.style.display = 'none'; };
+            bars.forEach(bar => {
+                bar.addEventListener('mouseenter', e => show(e, bar));
+                bar.addEventListener('mousemove', e => show(e, bar));
+                bar.addEventListener('mouseleave', hide);
+                bar.addEventListener('touchstart', e => show(e, bar), { passive: true });
+            });
+            document.addEventListener('touchstart', e => {
+                if (e.target && e.target.classList && e.target.classList.contains('hist-bar')) return;
+                hide();
+            }, { passive: true });
+        }
+
+        function hideDetailModal() {
+            document.getElementById('detail-modal').classList.remove('active');
+            detailBillId = null;
+            detailBillInstance = null;
+        }
+
+        const todayDate = new Date().toISOString().split('T')[0];
+        document.getElementById('bill-date').value = todayDate;
+
+        document.querySelectorAll('.nav-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.dataset.tab;
+                document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.view-container').forEach(v => v.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(tabName + '-view').classList.add('active');
+                currentView = tabName;
+                render();
+            });
+        });
+
+        document.querySelectorAll('.period-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                analyticsPeriod = btn.dataset.period;
+                render();
+            });
+        });
+
+        document.getElementById('close-day-bills').addEventListener('click', closeDayBills);
+
+        document.getElementById('add-bill-btn').addEventListener('click', () => {
+            editingId = null;
+            editingMonth = null;
+            document.getElementById('scope-selector').style.display = 'none';
+            document.getElementById('modal-title').textContent = 'Add Bill';
+            document.getElementById('bill-form').reset();
+            document.getElementById('bill-date').value = todayDate;
+            document.getElementById('frequency-group').style.display = 'block';
+            document.getElementById('autopay-group').style.display = 'block';
+            document.getElementById('reset-group').style.display = 'none';
+            updateFrequencyNote();
+            showModal();
+        });
+
+        document.getElementById('today-btn').addEventListener('click', () => {
+            currentMonth = new Date();
+            render();
+        });
+
+        document.getElementById('close-detail').addEventListener('click', hideDetailModal);
+        document.getElementById('detail-close-btn').addEventListener('click', hideDetailModal);
+        document.getElementById('detail-edit-btn').addEventListener('click', () => {
+            const bill = detailBillInstance;
+            hideDetailModal();
+            if (bill) showEditDialog(bill);
+        });
+        document.getElementById('detail-modal').addEventListener('click', function(e) {
+            if (e.target === this) hideDetailModal();
+        });
+
+        document.querySelectorAll('.scope-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.scope-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                editScope = btn.dataset.scope;
+                const bill = bills.find(b => b.id === editingId);
+                if (bill) {
+                    loadBillForm(bill);
+                }
+                updateScopeInfo();
+            });
+        });
+
+        const resetBtn = document.getElementById('reset-override');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                setOverride(editingId, currentMonth.getFullYear(), currentMonth.getMonth(), null);
+                const bill = bills.find(b => b.id === editingId);
+                if (bill) {
+                    loadBillForm(bill);
+                }
+            });
+        }
+
+        document.getElementById('cancel-btn').addEventListener('click', hideModal);
+        document.getElementById('bill-form').addEventListener('submit', addOrUpdateBill);
+        document.getElementById('bill-frequency').addEventListener('change', updateFrequencyNote);
+
+        document.getElementById('confirm-delete').addEventListener('click', deleteBill);
+        document.getElementById('confirm-cancel').addEventListener('click', hideDeleteConfirm);
+
+        document.getElementById('prev-month').addEventListener('click', () => {
+            currentMonth.setMonth(currentMonth.getMonth() - 1);
+            render();
+        });
+
+        document.getElementById('next-month').addEventListener('click', () => {
+            currentMonth.setMonth(currentMonth.getMonth() + 1);
+            render();
+        });
+
+        document.getElementById('bill-modal').addEventListener('click', function(e) {
+            if (e.target === this) hideModal();
+        });
+
+        document.getElementById('delete-confirm').addEventListener('click', function(e) {
+            if (e.target === this) hideDeleteConfirm();
+        });
+
+        document.getElementById('day-bills-sheet').addEventListener('click', function(e) {
+            if (e.target === this) closeDayBills();
+        });
+
+        // ===== BACKUP / RESTORE / PASSWORD =====
+        var PW_KEY = 'billTrackerPwHash';
+        var SETTINGS_KEY = 'billTrackerSettings';
+        var pwMode = null; // 'unlock' | 'set' | 'change'
+        var appBooted = false;
+
+        function sha256(str) {
+            var buf = new TextEncoder().encode(str);
+            return crypto.subtle.digest('SHA-256', buf).then(function(hash) {
+                var arr = Array.prototype.slice.call(new Uint8Array(hash));
+                return arr.map(function(b) {
+                    return ('00' + b.toString(16)).slice(-2);
+                }).join('');
+            });
+        }
+
+        function getPwHash() { return localStorage.getItem(PW_KEY); }
+
+        function exportBackup() {
+            var payload = {
+                app: 'BillTracker',
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                bills: getBills(),
+                overrides: getOverrides(),
+                income: getIncome(),
+                balance: getBalance(),
+                settings: localStorage.getItem(SETTINGS_KEY) || null
+            };
+            var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            var d = new Date();
+            var stamp = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+            a.href = url;
+            a.download = 'bill-tracker-backup-' + stamp + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            settingsMsg('Backup downloaded.', '#00ff88');
+        }
+
+        function importBackup(file) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    var data = JSON.parse(e.target.result);
+                    if (!data || !Array.isArray(data.bills)) {
+                        settingsMsg('Invalid backup file.', '#ff3333');
+                        return;
+                    }
+                    if (!confirm('Restore will replace all current bills and overrides. Continue?')) return;
+                    bills = data.bills;
+                    overrides = (data.overrides && typeof data.overrides === 'object') ? data.overrides : {};
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(bills));
+                    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
+                    if (data.settings) localStorage.setItem(SETTINGS_KEY, data.settings);
+                    if (Array.isArray(data.income)) saveIncome(data.income);
+                    if (data.balance) saveBalance(data.balance);
+                    render();
+                    settingsMsg('Restore complete — ' + bills.length + ' bills loaded.', '#00ff88');
+                } catch (err) {
+                    settingsMsg('Could not read file: ' + err.message, '#ff3333');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function settingsMsg(text, color) {
+            var el = document.getElementById('settings-msg');
+            el.textContent = text;
+            el.style.color = color || '#aaa';
+        }
+
+        function openSettings() {
+            document.getElementById('settings-sheet').style.display = 'flex';
+            settingsMsg('', '#aaa');
+            var hasPw = !!getPwHash();
+            document.getElementById('change-pw-btn').textContent = hasPw ? '🔑 Change Password' : '🔒 Set Password';
+            document.getElementById('remove-pw-btn').style.display = hasPw ? 'block' : 'none';
+            // Load cash flow setup
+            var bal = getBalance();
+            document.getElementById('cf-balance').value = bal ? bal.amount : '';
+            document.getElementById('cf-balance-date').value = bal ? bal.date : new Date().toISOString().split('T')[0];
+            document.getElementById('inc-date').value = new Date().toISOString().split('T')[0];
+            renderIncomeList();
+        }
+
+        function renderIncomeList() {
+            var list = getIncome();
+            var el = document.getElementById('income-list');
+            if (!list.length) {
+                el.innerHTML = '<div style="color:#666;font-size:0.8rem;padding:0.3rem 0;">No income added yet.</div>';
+                return;
+            }
+            var freqLabel = { 'one-time': 'Once', 'weekly': 'Weekly', 'biweekly': 'Biweekly', 'semimonthly': '1st & 15th', 'monthly': 'Monthly' };
+            el.innerHTML = list.map(function(inc) {
+                return '<div class="income-chip">' +
+                    '<div><div>' + inc.name + ' · $' + Number(inc.amount).toFixed(2) + '</div>' +
+                    '<div style="color:#777;font-size:0.72rem;">' + (freqLabel[inc.frequency] || inc.frequency) + ' · from ' + formatDateDisplay(inc.dueDate) + '</div></div>' +
+                    '<button data-income-id="' + inc.id + '" aria-label="Delete">✕</button>' +
+                '</div>';
+            }).join('');
+            el.querySelectorAll('button[data-income-id]').forEach(function(b) {
+                b.addEventListener('click', function() {
+                    var id = b.getAttribute('data-income-id');
+                    saveIncome(getIncome().filter(function(i) { return i.id !== id; }));
+                    renderIncomeList();
+                    if (currentView === 'cashflow') render();
+                });
+            });
+        }
+
+        function addIncomeFromForm() {
+            var name = document.getElementById('inc-name').value.trim();
+            var amount = parseFloat(document.getElementById('inc-amount').value);
+            var date = document.getElementById('inc-date').value;
+            var freq = document.getElementById('inc-frequency').value;
+            if (!name || isNaN(amount) || amount <= 0 || !date) {
+                settingsMsg('Enter a name, amount, and date for income.', '#ff3333');
+                return;
+            }
+            var list = getIncome();
+            list.push({ id: 'inc_' + Date.now(), name: name, amount: amount, dueDate: date, frequency: freq });
+            saveIncome(list);
+            document.getElementById('inc-name').value = '';
+            document.getElementById('inc-amount').value = '';
+            renderIncomeList();
+            settingsMsg('Income added.', '#00ff88');
+            if (currentView === 'cashflow') render();
+        }
+
+        function saveBalanceFromForm() {
+            var amt = parseFloat(document.getElementById('cf-balance').value);
+            var date = document.getElementById('cf-balance-date').value;
+            if (isNaN(amt) || !date) return;
+            saveBalance({ amount: amt, date: date });
+            if (currentView === 'cashflow') render();
+        }
+        function closeSettings() { document.getElementById('settings-sheet').style.display = 'none'; }
+
+        function showLock(mode) {
+            pwMode = mode;
+            var screen = document.getElementById('lock-screen');
+            var sub = document.getElementById('lock-subtitle');
+            var i1 = document.getElementById('lock-input');
+            var i2 = document.getElementById('lock-input2');
+            var btn = document.getElementById('lock-submit');
+            i1.value = ''; i2.value = '';
+            document.getElementById('lock-error').textContent = '';
+            if (mode === 'unlock') {
+                sub.textContent = 'Enter your password';
+                i1.placeholder = 'Password';
+                i2.style.display = 'none';
+                btn.textContent = 'Unlock';
+            } else {
+                sub.textContent = (mode === 'change') ? 'Set a new password' : 'Create a password to protect your bills';
+                i1.placeholder = 'New password';
+                i2.style.display = 'block';
+                btn.textContent = 'Save Password';
+            }
+            screen.style.display = 'flex';
+            setTimeout(function() { i1.focus(); }, 100);
+        }
+
+        function hideLock() { document.getElementById('lock-screen').style.display = 'none'; }
+
+        function bootApp() {
+            if (appBooted) return;
+            appBooted = true;
+            bills = getBills();
+            overrides = getOverrides();
+            updateFrequencyNote();
+            processAutoPayBills();
+            render();
+        }
+
+        function handleLockSubmit() {
+            var err = document.getElementById('lock-error');
+            var v1 = document.getElementById('lock-input').value;
+            var v2 = document.getElementById('lock-input2').value;
+            if (pwMode === 'unlock') {
+                sha256(v1).then(function(h) {
+                    if (h === getPwHash()) {
+                        hideLock();
+                        bootApp();
+                    } else {
+                        err.textContent = 'Incorrect password';
+                    }
+                });
+            } else {
+                if (!v1 || v1.length < 4) { err.textContent = 'Use at least 4 characters'; return; }
+                if (v1 !== v2) { err.textContent = 'Passwords do not match'; return; }
+                sha256(v1).then(function(h) {
+                    localStorage.setItem(PW_KEY, h);
+                    hideLock();
+                    if (pwMode === 'change') {
+                        settingsMsg('Password updated.', '#00ff88');
+                    } else {
+                        bootApp();
+                    }
+                });
+            }
+        }
+
+        document.getElementById('settings-btn').addEventListener('click', openSettings);
+        document.getElementById('settings-close').addEventListener('click', closeSettings);
+        document.getElementById('settings-sheet').addEventListener('click', function(e) { if (e.target === this) closeSettings(); });
+        document.getElementById('export-btn').addEventListener('click', exportBackup);
+        document.getElementById('import-btn').addEventListener('click', function() { document.getElementById('import-file').click(); });
+        document.getElementById('import-file').addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) importBackup(e.target.files[0]);
+            e.target.value = '';
+        });
+        document.getElementById('change-pw-btn').addEventListener('click', function() { closeSettings(); showLock('change'); });
+        document.getElementById('remove-pw-btn').addEventListener('click', function() {
+            if (confirm('Remove password protection? The app will open without a login.')) {
+                localStorage.removeItem(PW_KEY);
+                settingsMsg('Password removed.', '#00ff88');
+            }
+        });
+        document.getElementById('add-income-btn').addEventListener('click', addIncomeFromForm);
+        document.getElementById('cf-balance').addEventListener('change', saveBalanceFromForm);
+        document.getElementById('cf-balance-date').addEventListener('change', saveBalanceFromForm);
+
+        document.getElementById('lock-submit').addEventListener('click', handleLockSubmit);
+        document.getElementById('lock-input').addEventListener('keydown', function(e) { if (e.key === 'Enter') { if (pwMode === 'unlock') handleLockSubmit(); else document.getElementById('lock-input2').focus(); } });
+        document.getElementById('lock-input2').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLockSubmit(); });
+
+        // ===== INITIAL BOOT (gated by password) =====
+        if (getPwHash()) {
+            showLock('unlock');
+        } else {
+            bootApp();
+        }
+    </script>
+</body>
+</html>
